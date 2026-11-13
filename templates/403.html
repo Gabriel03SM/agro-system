@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Acesso negado{% endblock %}
+{% block content %}
+<div class="card"><h1>Acesso negado</h1><p>Essa ação é permitida apenas para o gerente.</p><p><a class="btn" href="{% url 'dashboard' %}">Voltar ao início</a></p></div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Vendas{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Vendas</h1><a class="btn primario" href="{% url 'venda_nova' %}">+ Nova venda</a></div>
+<form method="get" class="filtros">
+  <input type="search" name="q" value="{{ q }}" placeholder="Cliente ou observação">
+  <input type="date" name="de" value="{{ de }}" title="De">
+  <input type="date" name="ate" value="{{ ate }}" title="Até">
+  <select name="forma"><option value="">Todas as formas</option>
+    {% for cod, nome in formas %}<option value="{{ cod }}" {% if forma == cod %}selected{% endif %}>{{ nome }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filtrar</button>
+</form>
+<div class="tabela-wrap"><table>
+  <thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Pagamento</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  {% for v in page %}
+    <tr class="{% if v.cancelada %}inativo{% endif %}">
+      <td><a href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }}</a></td>
+      <td>{{ v.data|date:"d/m/Y H:i" }}</td>
+      <td>{{ v.cliente|default:"—" }}</td>
+      <td>{{ v.get_forma_pagamento_display }}{% if v.cancelada %} <span class="badge cinza">cancelada</span>{% endif %}</td>
+      <td class="num">R$ {{ v.total|floatformat:"2g" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="mudo">Nenhuma venda encontrada.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% include "loja/_paginacao.html" %}
+{% endblock %}

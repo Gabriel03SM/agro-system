@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="card estreito">
+  <h1>{{ titulo }}</h1>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "loja/_campos.html" %}
+    <div class="acoes"><button class="btn primario" type="submit">Salvar</button><a class="btn" href="{% url voltar %}">Cancelar</a></div>
+  </form>
+</div>
+{% endblock %}

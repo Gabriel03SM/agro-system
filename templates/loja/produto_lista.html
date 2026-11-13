@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Produtos{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Produtos</h1><a class="btn primario" href="{% url 'produto_novo' %}">+ Novo produto</a></div>
+<form method="get" class="filtros">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome ou código">
+  <select name="status">
+    <option value="ativos" {% if status == "ativos" %}selected{% endif %}>Ativos</option>
+    <option value="inativos" {% if status == "inativos" %}selected{% endif %}>Inativos</option>
+    <option value="todos" {% if status == "todos" %}selected{% endif %}>Todos</option>
+  </select>
+  <label class="chk"><input type="checkbox" name="baixo" value="1" {% if baixo %}checked{% endif %}> Só estoque baixo</label>
+  <button class="btn" type="submit">Filtrar</button>
+</form>
+<div class="tabela-wrap"><table>
+  <thead><tr><th>Produto</th><th>Categoria</th><th class="num">Preço</th><th class="num">Estoque</th><th></th></tr></thead>
+  <tbody>
+  {% for p in page %}
+    <tr class="{% if not p.ativo %}inativo{% endif %}">
+      <td><strong>{{ p.nome }}</strong>{% if p.codigo %}<br><small class="mudo">{{ p.codigo }}</small>{% endif %}{% if not p.ativo %} <span class="badge cinza">inativo</span>{% endif %}</td>
+      <td>{{ p.categoria|default:"—" }}</td>
+      <td class="num">R$ {{ p.preco_venda|floatformat:"2g" }}</td>
+      <td class="num {% if p.estoque_baixo %}neg{% endif %}">{{ p.estoque_atual|floatformat:"-3g" }} {{ p.unidade }}</td>
+      <td class="acoes-linha"><a href="{% url 'produto_estoque' p.pk %}">Ajustar estoque</a> · <a href="{% url 'produto_editar' p.pk %}">Editar</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="mudo">Nenhum produto encontrado.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% include "loja/_paginacao.html" %}
+{% endblock %}

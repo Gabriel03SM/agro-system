@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Venda #{{ venda.pk }}{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Venda #{{ venda.pk }} {% if venda.cancelada %}<span class="badge cinza">cancelada</span>{% endif %}</h1><a class="btn" href="{% url 'venda_lista' %}">← Vendas</a></div>
+<div class="card">
+  <div class="linha"><span>Data</span><strong>{{ venda.data|date:"d/m/Y H:i" }}</strong></div>
+  <div class="linha"><span>Pagamento</span><strong>{{ venda.get_forma_pagamento_display }}</strong></div>
+  <div class="linha"><span>Cliente</span><strong>{{ venda.cliente|default:"—" }}</strong></div>
+  {% if venda.observacao %}<div class="linha"><span>Observação</span><strong>{{ venda.observacao }}</strong></div>{% endif %}
+  <div class="linha"><span>Registrada por</span><strong>{{ venda.criado_por|default:"—" }}</strong></div>
+</div>
+<div class="card">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Preço</th><th class="num">Subtotal</th></tr></thead>
+    <tbody>{% for i in itens %}
+      <tr><td>{{ i.produto.nome }}</td><td class="num">{{ i.quantidade|floatformat:"-3g" }} {{ i.produto.unidade }}</td><td class="num">R$ {{ i.preco_unitario|floatformat:"2g" }}</td><td class="num">R$ {{ i.subtotal|floatformat:"2g" }}</td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><td colspan="3" class="num"><strong>Total</strong></td><td class="num"><strong>R$ {{ venda.total|floatformat:"2g" }}</strong></td></tr></tfoot>
+  </table></div>
+</div>
+{% if user.is_staff and not venda.cancelada %}
+<form method="post" action="{% url 'venda_cancelar' venda.pk %}" onsubmit="return confirm('Cancelar esta venda? O estoque será devolvido.')">{% csrf_token %}<button class="btn perigo" type="submit">Cancelar venda</button></form>
+{% endif %}
+{% endblock %}

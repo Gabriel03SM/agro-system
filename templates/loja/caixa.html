@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Caixa{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Caixa</h1>
+  <div><a class="btn perigo" href="{% url 'movimento_novo' %}?tipo=SAIDA">− Saída de caixa</a> <a class="btn" href="{% url 'movimento_novo' %}?tipo=ENTRADA">+ Entrada avulsa</a></div></div>
+<form method="get" class="filtros">
+  <label>De <input type="date" name="de" value="{{ de|date:'Y-m-d' }}"></label>
+  <label>Até <input type="date" name="ate" value="{{ ate|date:'Y-m-d' }}"></label>
+  <button class="btn" type="submit">Ver período</button>
+</form>
+<div class="grade">
+  <div class="card kpi"><span>Vendas recebidas</span><strong>R$ {{ r.recebido|floatformat:"2g" }}</strong><small>{{ r.qtd_vendas }} venda(s), sem fiado</small></div>
+  <div class="card kpi"><span>Outras entradas</span><strong class="pos">R$ {{ r.entradas|floatformat:"2g" }}</strong></div>
+  <div class="card kpi"><span>Saídas</span><strong class="neg">R$ {{ r.saidas|floatformat:"2g" }}</strong></div>
+  <div class="card kpi"><span>Saldo do período</span><strong class="{% if r.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ r.saldo|floatformat:"2g" }}</strong>{% if r.fiado %}<small>Fiado a receber: R$ {{ r.fiado|floatformat:"2g" }}</small>{% endif %}</div>
+</div>
+<div class="duas">
+  <section class="card"><h2>Vendas por forma de pagamento</h2>
+    {% for nome, valor in r.por_forma %}<div class="linha"><span>{{ nome }}</span><strong>R$ {{ valor|floatformat:"2g" }}</strong></div>
+    {% empty %}<p class="mudo">Sem vendas no período.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Lançamentos do período</h2>
+    {% for m in movimentos %}
+      <div class="linha"><span>{{ m.data|date:"d/m H:i" }} · {{ m.descricao }}<br><small class="mudo">{{ m.get_motivo_display }}{% if m.criado_por %} · {{ m.criado_por }}{% endif %}</small></span>
+      <span class="{% if m.tipo == 'SAIDA' %}neg{% else %}pos{% endif %}">{% if m.tipo == 'SAIDA' %}−{% else %}+{% endif %} R$ {{ m.valor|floatformat:"2g" }}
+      {% if user.is_staff %}<a href="{% url 'movimento_excluir' m.pk %}" class="neg" title="Excluir">✕</a>{% endif %}</span></div>
+    {% empty %}<p class="mudo">Sem lançamentos no período.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

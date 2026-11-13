@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Ajustar estoque{% endblock %}
+{% block content %}
+<div class="card estreito">
+  <h1>Ajustar estoque</h1>
+  <p><strong>{{ produto.nome }}</strong><br>Estoque atual: <strong>{{ produto.estoque_atual|floatformat:"-3g" }} {{ produto.unidade }}</strong></p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "loja/_campos.html" %}
+    <div class="acoes"><button class="btn primario" type="submit">Salvar</button><a class="btn" href="{% url 'produto_lista' %}">Cancelar</a></div>
+  </form>
+</div>
+<div class="card">
+  <h2>Últimas movimentações</h2>
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Quando</th><th>Motivo</th><th class="num">Qtd</th><th>Usuário</th><th>Obs.</th></tr></thead>
+    <tbody>{% for m in historico %}
+      <tr><td>{{ m.criado_em|date:"d/m/Y H:i" }}</td><td>{{ m.get_motivo_display }}</td>
+      <td class="num {% if m.quantidade < 0 %}neg{% else %}pos{% endif %}">{{ m.quantidade|floatformat:"-3g" }}</td>
+      <td>{{ m.usuario|default:"—" }}</td><td>{{ m.observacao }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="mudo">Sem movimentações.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

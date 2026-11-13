@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Nova venda{% endblock %}
+{% block content %}
+<h1>Nova venda</h1>
+<form method="post" novalidate id="form-venda">{% csrf_token %}
+  <div class="card">
+    <h2>Dados da venda</h2>
+    {% include "loja/_campos.html" %}
+  </div>
+  <div class="card">
+    <h2>Itens</h2>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="erro">{{ formset.non_form_errors }}</div>{% endif %}
+    <div class="item cabecalho-itens"><span>Produto</span><span>Qtd</span><span>Preço unit.</span><span>Subtotal</span><span></span></div>
+    <div id="itens">
+      {% for f in formset %}{% include "loja/_item_row.html" with form=f %}{% endfor %}
+    </div>
+    <button type="button" class="btn" id="add-item">+ Adicionar item</button>
+    <div class="total-venda">Total: <strong id="total">R$ 0,00</strong></div>
+  </div>
+  <div class="acoes"><button class="btn primario grande" type="submit">Registrar venda</button><a class="btn" href="{% url 'venda_lista' %}">Cancelar</a></div>
+</form>
+<template id="modelo-item">{% include "loja/_item_row.html" with form=formset.empty_form %}</template>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/venda.js' %}"></script>{% endblock %}

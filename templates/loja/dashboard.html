@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Início</h1>
+<div class="grade">
+  <div class="card kpi"><span>Vendas hoje</span><strong>R$ {{ hoje.total_vendas|floatformat:"2g" }}</strong><small>{{ hoje.qtd_vendas }} venda(s)</small></div>
+  <div class="card kpi"><span>Saídas de caixa hoje</span><strong class="neg">R$ {{ hoje.saidas|floatformat:"2g" }}</strong></div>
+  <div class="card kpi"><span>Saldo do caixa hoje</span><strong class="{% if hoje.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ hoje.saldo|floatformat:"2g" }}</strong></div>
+  <div class="card kpi"><span>Vendas no mês</span><strong>R$ {{ mes.total_vendas|floatformat:"2g" }}</strong><small>Saldo do mês: R$ {{ mes.saldo|floatformat:"2g" }}</small></div>
+</div>
+
+<div class="duas">
+  <section class="card">
+    <h2>⚠️ Estoque baixo {% if qtd_estoque_baixo %}<span class="badge">{{ qtd_estoque_baixo }}</span>{% endif %}</h2>
+    {% for p in estoque_baixo %}
+      <div class="linha"><span>{{ p.nome }}</span><span class="neg">{{ p.estoque_atual|floatformat:"-3g" }} {{ p.unidade }}</span></div>
+    {% empty %}<p class="mudo">Nenhum produto com estoque baixo.</p>{% endfor %}
+    {% if qtd_estoque_baixo > 10 %}<p><a href="{% url 'produto_lista' %}?baixo=1">Ver todos →</a></p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Últimas vendas</h2>
+    {% for v in ultimas_vendas %}
+      <div class="linha"><a href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }} · {{ v.data|date:"d/m H:i" }}{% if v.cancelada %} <span class="badge cinza">cancelada</span>{% endif %}</a><span>R$ {{ v.total|floatformat:"2g" }}</span></div>
+    {% empty %}<p class="mudo">Nenhuma venda ainda.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

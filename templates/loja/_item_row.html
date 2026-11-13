@@ -1,0 +1,8 @@
+<div class="item" data-item>
+  <div class="campo prod">{{ form.produto }}{% for e in form.produto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo qtd">{{ form.quantidade }}{% for e in form.quantidade.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo preco">{{ form.preco_unitario }}{% for e in form.preco_unitario.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="sub"><span data-subtotal>R$ 0,00</span></div>
+  <button type="button" class="link neg" data-remover title="Remover item">✕</button>
+  {% for h in form.hidden_fields %}{{ h }}{% endfor %}
+</div>

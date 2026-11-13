@@ -1,0 +1,32 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Início{% endblock %} · {{ NOME_LOJA }}</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+{% if user.is_authenticated %}
+<header class="topo">
+  <div class="wrap topo-in">
+    <a class="marca" href="{% url 'dashboard' %}">🌾 {{ NOME_LOJA }}</a>
+    <nav>
+      <a href="{% url 'venda_nova' %}" class="destaque">+ Nova venda</a>
+      <a href="{% url 'venda_lista' %}">Vendas</a>
+      <a href="{% url 'caixa' %}">Caixa</a>
+      <a href="{% url 'produto_lista' %}">Produtos</a>
+      <a href="{% url 'categoria_lista' %}">Categorias</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+      <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sair</button></form>
+    </nav>
+  </div>
+</header>
+{% endif %}
+<main class="wrap">
+  {% for m in messages %}<div class="aviso {{ m.tags }}">{{ m }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Confirmar{% endblock %}
+{% block content %}
+<div class="card estreito"><h1>Confirmar</h1><p>{{ texto }}</p>
+<form method="post">{% csrf_token %}<div class="acoes"><button class="btn perigo" type="submit">Sim, excluir</button><a class="btn" href="{% url voltar %}">Cancelar</a></div></form></div>
+{% endblock %}
