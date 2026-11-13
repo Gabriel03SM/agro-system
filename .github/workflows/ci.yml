@@ -1,0 +1,92 @@
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_PASSWORD: teste-local-ci
+          POSTGRES_DB: agro_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DEBUG: "True"
+      SECRET_KEY: ci-only-not-a-production-key
+      TEST_DATABASE_URL: postgresql://postgres:teste-local-ci@localhost:5432/agro_ci
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py check --fail-level WARNING
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py test --settings=config.test_settings --noinput
+      - run: python manage.py collectstatic --noinput
+        env:
+          DEBUG: "False"
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests_browser/operacao.py
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: verificacao-visual
+          path: tmp/browser/*.png
+          retention-days: 7
+
+  backup-integracao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    container: postgres:18-bookworm
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_PASSWORD: teste-local-ci
+          POSTGRES_DB: agro_source
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: bash scripts/instalar_age.sh
+      - name: Criar dados e banco efêmero de restauração
+        env:
+          PGHOST: postgres
+          PGUSER: postgres
+          PGPASSWORD: teste-local-ci
+          PGDATABASE: agro_source
+        run: |
+          psql --no-psqlrc -v ON_ERROR_STOP=1 -c 'CREATE DATABASE agro_restore;'
+          psql --no-psqlrc -v ON_ERROR_STOP=1 -c 'CREATE TABLE auth_user (id integer PRIMARY KEY, username text); CREATE TABLE loja_venda (id integer PRIMARY KEY, total numeric(12,2)); INSERT INTO auth_user VALUES (1, $$gerente_teste$$); INSERT INTO loja_venda VALUES (1, 123.45);'
+      - name: Exportar, restaurar e cifrar
+        env:
+          BACKUP_DATABASE_URL: postgresql://postgres:teste-local-ci@postgres:5432/agro_source?sslmode=disable
+          RESTORE_TEST_DATABASE_URL: postgresql://postgres:teste-local-ci@postgres:5432/agro_restore?sslmode=disable
+        run: |
+          age-keygen -o /tmp/teste.agekey
+          export BACKUP_AGE_RECIPIENT="$(age-keygen -y /tmp/teste.agekey)"
+          python3 scripts/backup_banco.py --destino /tmp/backups
+          age --decrypt -i /tmp/teste.agekey -o /tmp/restaurado.dump /tmp/backups/*.age
+          pg_restore --list /tmp/restaurado.dump > /dev/null

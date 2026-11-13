@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Aguarde para tentar novamente{% endblock %}
+{% block content %}
+<div class="card login"><h1>Muitas tentativas de acesso</h1><p>O acesso deste usuário foi temporariamente bloqueado. Aguarde 15 minutos antes de tentar novamente ou fale com o gerente.</p><a class="btn" href="{% url 'login' %}">Voltar para entrar</a></div>
+{% endblock %}

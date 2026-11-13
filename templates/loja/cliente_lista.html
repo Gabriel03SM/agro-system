@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Clientes e fiado{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Clientes e fiado</h1><a class="btn primario" href="{% url 'cliente_novo' %}">Novo cliente</a></div>
+<div class="card cabeca"><span>Saldo devedor dos clientes</span><strong class="neg">R$ {{ total_devedor|floatformat:"2g" }}</strong></div>
+<form class="filtros" method="get"><input type="search" name="q" value="{{ q }}" placeholder="Nome, documento ou telefone" aria-label="Buscar cliente"><label class="chk"><input type="checkbox" name="devedores" value="1" {% if devedores %}checked{% endif %}> Só com fiado pendente</label><button class="btn">Filtrar</button></form>
+<div class="tabela-wrap"><table><thead><tr><th>Cliente</th><th>Telefone</th><th class="num">Saldo devedor</th><th></th></tr></thead><tbody>{% for c in page %}<tr><td><a href="{% url 'cliente_detalhe' c.pk %}">{{ c.nome }}</a>{% if not c.ativo %} <span class="badge cinza">inativo</span>{% endif %}<small>{{ c.documento }}</small></td><td>{{ c.telefone|default:"—" }}</td><td class="num {% if c.saldo %}neg{% endif %}">R$ {{ c.saldo|floatformat:"2g" }}</td><td class="acoes-linha"><a href="{% url 'cliente_detalhe' c.pk %}">Ver ficha / receber</a></td></tr>{% empty %}<tr><td colspan="4">Nenhum cliente encontrado. Cadastre um cliente para começar a vender fiado.</td></tr>{% endfor %}</tbody></table></div>
+{% include "loja/_paginacao.html" %}
+{% endblock %}

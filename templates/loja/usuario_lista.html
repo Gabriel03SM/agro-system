@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Usuários{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Usuários e acessos</h1><a class="btn primario" href="{% url 'usuario_novo' %}">Novo usuário</a></div><p class="mudo">Gerente acessa a gestão e as operações; caixa registra vendas e recebimentos; estoquista cuida dos produtos, fornecedores e lotes.</p>
+<div class="tabela-wrap"><table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Status</th><th></th></tr></thead><tbody>{% for u in usuarios %}<tr><td>{{ u.username }}</td><td>{{ u.first_name }}</td><td>{% if u.is_staff %}Gerente{% elif u.perfil_loja %}{{ u.perfil_loja.get_cargo_display }}{% else %}Caixa{% endif %}</td><td>{% if u.is_active %}Ativo{% else %}Inativo{% endif %}</td><td><a href="{% url 'usuario_editar' u.pk %}">Editar acesso</a></td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

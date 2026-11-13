@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Início</h1>
+{% if qtd_lotes_alerta %}<div class="aviso error">{{ qtd_lotes_alerta }} lote(s) vencido(s), a vencer em até 30 dias ou sem validade informada. {% if pode_estoque %}<a href="{% url 'lote_lista' %}">Conferir lotes</a>{% endif %}</div>{% endif %}
+{% if qtd_contas_vencidas %}<div class="aviso error">{{ qtd_contas_vencidas }} conta(s) vencida(s). <a href="{% url 'conta_lista' %}?filtro=vencidas">Ver contas a pagar</a></div>{% endif %}
 <div class="grade">
   <div class="card kpi"><span>Vendas hoje</span><strong>R$ {{ hoje.total_vendas|floatformat:"2g" }}</strong><small>{{ hoje.qtd_vendas }} venda(s)</small></div>
   <div class="card kpi"><span>Saídas de caixa hoje</span><strong class="neg">R$ {{ hoje.saidas|floatformat:"2g" }}</strong></div>

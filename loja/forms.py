@@ -1,8 +1,12 @@
+from decimal import Decimal
+
 from django import forms
+from django.db.models import Q
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
-from .models import Categoria, ItemVenda, MovimentoCaixa, Produto, Venda
+from .models import (Categoria, Cliente, ContaPagar, Fornecedor, ItemVenda, LoteProduto,
+                     MovimentoCaixa, PerfilUsuario, Produto, Venda)
 from .services import fmt_qtd
 
 FMT = "%Y-%m-%dT%H:%M"
@@ -26,17 +30,33 @@ class CategoriaForm(forms.ModelForm):
         fields = ["nome"]
 
 
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ["nome", "documento", "telefone", "email", "endereco", "observacao", "ativo"]
+        widgets = {"observacao": forms.Textarea(attrs={"rows": 3})}
+
+
+class FornecedorForm(forms.ModelForm):
+    class Meta:
+        model = Fornecedor
+        fields = ["nome", "documento", "telefone", "email", "endereco", "ativo"]
+
+
 class ProdutoForm(forms.ModelForm):
     class Meta:
         model = Produto
         fields = ["nome", "codigo", "categoria", "unidade", "preco_custo", "preco_venda",
-                  "estoque_atual", "estoque_minimo", "ativo"]
+                  "estoque_atual", "estoque_minimo", "controla_lote", "ativo"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields["estoque_atual"].disabled = True
             self.fields["estoque_atual"].help_text = "Para alterar, use “Ajustar estoque” na lista de produtos."
+
+    def clean_codigo(self):
+        return self.cleaned_data.get("codigo") or None
 
 
 class EstoqueForm(forms.Form):
@@ -48,11 +68,38 @@ class EstoqueForm(forms.Form):
     tipo = forms.ChoiceField(label="Tipo", choices=TIPOS)
     quantidade = forms.DecimalField(label="Quantidade", max_digits=12, decimal_places=3, min_value=0)
     observacao = forms.CharField(label="Observação", max_length=255, required=False)
+    fornecedor = forms.ModelChoiceField(label="Fornecedor (entrada de mercadoria)",
+                                        queryset=Fornecedor.objects.filter(ativo=True), required=False)
+    custo_unitario = forms.DecimalField(label="Custo unitário da entrada (R$)", max_digits=10, decimal_places=2,
+                                        min_value=0, required=False,
+                                        help_text="Atualiza o custo do produto para o valor desta compra.")
+    numero_lote = forms.CharField(label="Número do lote (entrada)", max_length=80, required=False)
+    validade = forms.DateField(label="Validade (entrada)", required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    lote = forms.ModelChoiceField(label="Lote (perda ou contagem)", queryset=LoteProduto.objects.none(), required=False)
+
+    def __init__(self, *args, produto=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.produto = produto
+        if produto and produto.controla_lote:
+            self.fields["lote"].queryset = produto.lotes.all()
+            self.fields["quantidade"].help_text = "Na contagem, informe o saldo do lote selecionado. O estoque total será recalculado."
+        else:
+            for nome in ("numero_lote", "validade", "lote"):
+                self.fields.pop(nome)
 
     def clean(self):
         dados = super().clean()
         if dados.get("tipo") in ("ENTRADA", "PERDA") and dados.get("quantidade") is not None and dados["quantidade"] <= 0:
             self.add_error("quantidade", "Informe uma quantidade maior que zero.")
+        if dados.get("tipo") == "ENTRADA":
+            for campo in ("fornecedor", "custo_unitario"):
+                if dados.get(campo) is None:
+                    self.add_error(campo, "Preencha este campo para a entrada de mercadoria.")
+        if self.produto and self.produto.controla_lote:
+            campos = ("numero_lote", "validade") if dados.get("tipo") == "ENTRADA" else ("lote",)
+            for campo in campos:
+                if not dados.get(campo):
+                    self.add_error(campo, "Informe este campo para o produto com controle de lote.")
         return dados
 
 
@@ -61,12 +108,38 @@ class VendaForm(forms.ModelForm):
 
     class Meta:
         model = Venda
-        fields = ["data", "forma_pagamento", "cliente", "observacao"]
+        fields = ["data", "cliente_cadastro", "forma_pagamento", "desconto", "observacao"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["cliente_cadastro"].queryset = Cliente.objects.filter(ativo=True)
+        self.fields["cliente_cadastro"].empty_label = "Consumidor sem cadastro (à vista)"
+        self.fields["desconto"].required = False
+        for codigo, rotulo in Venda.FORMAS:
+            if codigo == "DIVIDIDO":
+                continue
+            campo = forms.DecimalField(label=f"{rotulo} (R$)", max_digits=12, decimal_places=2,
+                                        min_value=0, required=False)
+            if self.instance.pk:
+                campo.initial = next((p.valor for p in self.instance.pagamentos.all() if p.forma == codigo), None)
+            self.fields[f"pagamento_{codigo}"] = campo
+        if self.instance.pk:
+            self.fields["versao"] = forms.IntegerField(widget=forms.HiddenInput, initial=self.instance.versao)
+            self.fields["motivo_correcao"] = forms.CharField(label="Motivo da correção", max_length=255)
+
+    def pagamentos(self):
+        if self.cleaned_data["forma_pagamento"] != "DIVIDIDO":
+            return None
+        return [{"forma": codigo, "valor": self.cleaned_data.get(f"pagamento_{codigo}") or 0}
+                for codigo, _ in Venda.FORMAS if codigo != "DIVIDIDO"]
 
     def clean(self):
         dados = super().clean()
-        if dados.get("forma_pagamento") == "FIADO" and not dados.get("cliente"):
-            self.add_error("cliente", "Informe o nome do cliente para venda fiado.")
+        dados["desconto"] = dados.get("desconto") or 0
+        tem_fiado = dados.get("forma_pagamento") == "FIADO" or (
+            dados.get("forma_pagamento") == "DIVIDIDO" and (dados.get("pagamento_FIADO") or 0) > 0)
+        if tem_fiado and not dados.get("cliente_cadastro"):
+            self.add_error("cliente_cadastro", "Selecione um cliente cadastrado para vender fiado.")
         return dados
 
 
@@ -76,6 +149,8 @@ class ProdutoSelect(forms.Select):
         produto = getattr(value, "instance", None)
         if produto is not None:
             option["attrs"]["data-preco"] = str(produto.preco_venda)
+            option["attrs"]["data-codigo"] = produto.codigo or ""
+            option["attrs"]["data-nome"] = produto.nome
         return option
 
 
@@ -90,7 +165,7 @@ class ItemVendaForm(forms.ModelForm):
 
     class Meta:
         model = ItemVenda
-        fields = ["produto", "quantidade", "preco_unitario"]
+        fields = ["produto", "quantidade", "preco_unitario", "desconto"]
         widgets = {
             "quantidade": forms.NumberInput(attrs={"step": "any", "min": "0", "inputmode": "decimal"}),
             "preco_unitario": forms.NumberInput(attrs={"step": "0.01", "min": "0", "inputmode": "decimal"}),
@@ -99,6 +174,13 @@ class ItemVendaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["produto"].queryset = Produto.objects.filter(ativo=True).order_by("nome")
+        if self.instance.pk:
+            self.fields["produto"].queryset = Produto.objects.filter(
+                Q(ativo=True) | Q(pk=self.instance.produto_id)).order_by("nome")
+        self.fields["desconto"].required = False
+
+    def clean_desconto(self):
+        return self.cleaned_data.get("desconto") or 0
 
 
 class ItemFormSet(BaseInlineFormSet):
@@ -110,7 +192,7 @@ class ItemFormSet(BaseInlineFormSet):
 
 ItemVendaFormSet = inlineformset_factory(
     Venda, ItemVenda, form=ItemVendaForm, formset=ItemFormSet,
-    extra=0, min_num=1, validate_min=True, can_delete=False,
+    extra=0, min_num=1, validate_min=True, can_delete=True, max_num=100, validate_max=True,
 )
 
 
@@ -119,5 +201,54 @@ class MovimentoCaixaForm(forms.ModelForm):
 
     class Meta:
         model = MovimentoCaixa
-        fields = ["tipo", "motivo", "descricao", "valor", "data"]
+        fields = ["tipo", "motivo", "descricao", "valor", "forma", "data"]
         widgets = {"valor": forms.NumberInput(attrs={"step": "0.01", "min": "0.01", "inputmode": "decimal"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["motivo"].choices = [m for m in MovimentoCaixa.MOTIVOS if m[0] != "RECEBIMENTO"]
+
+
+class RecebimentoForm(forms.Form):
+    valor = forms.DecimalField(label="Valor recebido (R$)", max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    forma = forms.ChoiceField(label="Forma de recebimento", choices=MovimentoCaixa._meta.get_field("forma").choices)
+
+
+class RecebimentoAnteriorForm(forms.Form):
+    movimento = forms.ModelChoiceField(label="Recebimento anterior à atualização", queryset=MovimentoCaixa.objects.filter(
+        caixa__isnull=True, tipo="ENTRADA", motivo="RECEBIMENTO", baixas_fiado__isnull=True))
+
+
+class AbrirCaixaForm(forms.Form):
+    troco_inicial = forms.DecimalField(label="Troco inicial em dinheiro (R$)", max_digits=12, decimal_places=2,
+                                       min_value=0, initial=0)
+
+
+class FecharCaixaForm(forms.Form):
+    dinheiro_contado = forms.DecimalField(label="Dinheiro contado na gaveta (R$)", max_digits=12, decimal_places=2, min_value=0)
+    observacao = forms.CharField(label="Observação da conferência", max_length=255, required=False)
+
+
+class LoteForm(forms.ModelForm):
+    class Meta:
+        model = LoteProduto
+        fields = ["numero", "validade"]
+        widgets = {"validade": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+
+class ContaPagarForm(forms.ModelForm):
+    class Meta:
+        model = ContaPagar
+        fields = ["descricao", "fornecedor", "valor", "vencimento"]
+        widgets = {"vencimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+
+class ImportacaoCSVForm(forms.Form):
+    arquivo = forms.FileField(label="Arquivo CSV (UTF-8)", help_text="Até 1 MB e 1.000 produtos. Use o modelo disponível nesta tela.")
+    atualizar = forms.BooleanField(label="Atualizar produtos que já tenham o mesmo código", required=False)
+
+    def clean_arquivo(self):
+        arquivo = self.cleaned_data["arquivo"]
+        if arquivo.size > 1024 * 1024:
+            raise forms.ValidationError("O arquivo deve ter até 1 MB.")
+        return arquivo

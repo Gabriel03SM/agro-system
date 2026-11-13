@@ -5,8 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import MovimentoCaixa, Produto, Venda
-from .services import EstoqueInsuficiente, ajustar_estoque, cancelar_venda, registrar_venda
+from .models import Cliente, Fornecedor, MovimentoCaixa, Produto, Venda
+from .services import EstoqueInsuficiente, abrir_caixa, ajustar_estoque, cancelar_venda, registrar_venda
 
 D = Decimal
 
@@ -16,11 +16,14 @@ class BaseTest(TestCase):
         User = get_user_model()
         self.gerente = User.objects.create_user("gerente", password="x12345678", is_staff=True)
         self.func = User.objects.create_user("func", password="x12345678")
+        self.caixa = abrir_caixa(D("50"), self.func)
+        self.fornecedor = Fornecedor.objects.create(nome="Distribuidora")
         self.racao = Produto.objects.create(nome="Ração 25kg", unidade="SC", preco_venda=D("100"),
                                             estoque_atual=D("10"), estoque_minimo=D("3"))
 
     def vender(self, qtd, forma="DINHEIRO", cliente=""):
-        return registrar_venda(Venda(forma_pagamento=forma, cliente=cliente),
+        cadastro = Cliente.objects.get_or_create(nome=cliente)[0] if cliente else None
+        return registrar_venda(Venda(forma_pagamento=forma, cliente=cliente, cliente_cadastro=cadastro),
                                [{"produto": self.racao, "quantidade": D(qtd), "preco_unitario": D("100")}], self.func)
 
 
@@ -50,13 +53,13 @@ class ServicosTest(BaseTest):
         self.assertEqual(self.racao.estoque_atual, D("10"))
 
     def test_ajustes(self):
-        ajustar_estoque(self.racao, "ENTRADA", D("5"), "", self.func)
-        ajustar_estoque(self.racao, "PERDA", D("2"), "", self.func)
-        ajustar_estoque(self.racao, "AJUSTE", D("20"), "contagem", self.func)
+        ajustar_estoque(self.racao, "ENTRADA", D("5"), "", self.gerente, self.fornecedor, D("70"))
+        ajustar_estoque(self.racao, "PERDA", D("2"), "", self.gerente)
+        ajustar_estoque(self.racao, "AJUSTE", D("20"), "contagem", self.gerente)
         self.racao.refresh_from_db()
         self.assertEqual(self.racao.estoque_atual, D("20"))
         with self.assertRaises(EstoqueInsuficiente):
-            ajustar_estoque(self.racao, "PERDA", D("99"), "", self.func)
+            ajustar_estoque(self.racao, "PERDA", D("99"), "", self.gerente)
 
 
 class TelasTest(BaseTest):
@@ -66,7 +69,7 @@ class TelasTest(BaseTest):
         self.assertIn("/entrar/", r.url)
 
     def test_paginas_principais(self):
-        self.client.login(username="func", password="x12345678")
+        self.client.login(username="gerente", password="x12345678")
         for nome in ["dashboard", "produto_lista", "produto_novo", "categoria_lista", "venda_lista", "venda_nova",
                      "caixa", "movimento_novo"]:
             self.assertEqual(self.client.get(reverse(nome)).status_code, 200, nome)

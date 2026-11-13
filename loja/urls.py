@@ -1,8 +1,28 @@
 from django.urls import path
 
-from . import views
+from . import gestao_views as gestao, operacao_views as operacao, views
 
 urlpatterns = [
+    path("lotes/", gestao.lote_lista, name="lote_lista"),
+    path("lotes/<int:pk>/editar/", gestao.lote_editar, name="lote_editar"),
+    path("contas/", gestao.conta_lista, name="conta_lista"),
+    path("contas/nova/", gestao.conta_form, name="conta_nova"),
+    path("contas/<int:pk>/", gestao.conta_detalhe, name="conta_detalhe"),
+    path("contas/<int:pk>/editar/", gestao.conta_form, name="conta_editar"),
+    path("relatorios/", gestao.relatorio, name="relatorio"),
+    path("produtos/importar/", gestao.importar_produtos, name="importar_produtos"),
+    path("auditoria/", gestao.auditoria_lista, name="auditoria_lista"),
+    path("usuarios/", gestao.usuario_lista, name="usuario_lista"),
+    path("usuarios/novo/", gestao.usuario_form, name="usuario_novo"),
+    path("usuarios/<int:pk>/editar/", gestao.usuario_form, name="usuario_editar"),
+    path("clientes/", operacao.cliente_lista, name="cliente_lista"),
+    path("clientes/novo/", operacao.cliente_form, name="cliente_novo"),
+    path("clientes/<int:pk>/", operacao.cliente_detalhe, name="cliente_detalhe"),
+    path("clientes/<int:pk>/editar/", operacao.cliente_form, name="cliente_editar"),
+    path("fornecedores/", operacao.fornecedor_lista, name="fornecedor_lista"),
+    path("fornecedores/novo/", operacao.fornecedor_form, name="fornecedor_novo"),
+    path("fornecedores/<int:pk>/", operacao.fornecedor_detalhe, name="fornecedor_detalhe"),
+    path("fornecedores/<int:pk>/editar/", operacao.fornecedor_form, name="fornecedor_editar"),
     path("", views.dashboard, name="dashboard"),
     path("produtos/", views.produto_lista, name="produto_lista"),
     path("produtos/novo/", views.produto_novo, name="produto_novo"),
@@ -13,8 +33,12 @@ urlpatterns = [
     path("vendas/", views.venda_lista, name="venda_lista"),
     path("vendas/nova/", views.venda_nova, name="venda_nova"),
     path("vendas/<int:pk>/", views.venda_detalhe, name="venda_detalhe"),
+    path("vendas/<int:pk>/editar/", views.venda_editar, name="venda_editar"),
+    path("vendas/<int:pk>/comprovante/", views.venda_comprovante, name="venda_comprovante"),
     path("vendas/<int:pk>/cancelar/", views.venda_cancelar, name="venda_cancelar"),
     path("caixa/", views.caixa, name="caixa"),
+    path("caixa/abrir/", operacao.caixa_abrir, name="caixa_abrir"),
+    path("caixa/<int:pk>/fechar/", operacao.caixa_fechar, name="caixa_fechar"),
     path("caixa/lancar/", views.movimento_novo, name="movimento_novo"),
     path("caixa/<int:pk>/excluir/", views.movimento_excluir, name="movimento_excluir"),
 ]

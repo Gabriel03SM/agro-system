@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Conta #{{ conta.pk }}{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>{{ conta.descricao }}</h1><a class="btn" href="{% url 'conta_editar' conta.pk %}">Editar conta</a></div>
+<div class="duas"><section class="card"><div class="linha"><span>Fornecedor</span><strong>{{ conta.fornecedor|default:"—" }}</strong></div><div class="linha"><span>Vencimento</span><strong>{{ conta.vencimento|date:"d/m/Y" }}</strong></div><div class="linha"><span>Valor total</span><strong>R$ {{ conta.valor|floatformat:"2g" }}</strong></div><div class="linha"><span>Saldo a pagar</span><strong>R$ {{ conta.saldo|floatformat:"2g" }}</strong></div></section><section class="card"><h2>Registrar pagamento</h2><p class="mudo">Pagamento total ou parcial. A saída será lançada uma única vez no caixa aberto.</p><form method="post" novalidate>{% csrf_token %}{% include "loja/_campos.html" %}<button class="btn primario">Registrar pagamento</button></form></section></div>
+<section class="card"><h2>Pagamentos desta conta</h2>{% for p in conta.pagamentos.all %}<div class="linha"><span>{{ p.movimento.data|date:"d/m/Y H:i" }} · {{ p.movimento.get_forma_display }}<small>{{ p.movimento.criado_por }}</small></span><strong>R$ {{ p.valor|floatformat:"2g" }}</strong></div>{% empty %}<p>Nenhum pagamento registrado.</p>{% endfor %}</section>
+{% endblock %}

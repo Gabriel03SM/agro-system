@@ -1,77 +1,127 @@
 (function () {
-  var prefixo = "itens";
+  "use strict";
+  var form = document.getElementById("form-venda");
+  if (!form) return;
   var lista = document.getElementById("itens");
   var modelo = document.getElementById("modelo-item");
-  var total = document.getElementById("total");
-  var totalForms = document.getElementById("id_" + prefixo + "-TOTAL_FORMS");
+  var totalForms = document.getElementById("id_itens-TOTAL_FORMS");
+  var busca = document.getElementById("busca-produto");
+  var resultado = document.getElementById("resultado-busca");
   var moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var catalogo = new Map();
+  var datalist = document.getElementById("catalogo-produtos");
 
-  function num(v) {
-    var n = parseFloat(String(v).replace(",", "."));
-    return isNaN(n) ? 0 : n;
-  }
+  function num(v) { var n = Number(String(v || "0").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
+  function centavos(n) { return Math.round((n + Number.EPSILON) * 100); }
+  function normalizar(s) { return String(s).toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+  function linhas() { return Array.from(lista.querySelectorAll("[data-item]")).filter(function (r) { return !r.hidden; }); }
+
+  modelo.content.querySelectorAll("select[name$='-produto'] option").forEach(function (option) {
+    if (!option.value) return;
+    var produto = { id: option.value, nome: option.dataset.nome, codigo: option.dataset.codigo, preco: option.dataset.preco };
+    produto.rotulo = produto.nome + " · " + (produto.codigo || "#" + produto.id);
+    catalogo.set(produto.id, produto);
+    var sugestao = document.createElement("option");
+    sugestao.value = produto.rotulo;
+    datalist.appendChild(sugestao);
+  });
 
   function recalcular() {
     var soma = 0;
-    lista.querySelectorAll("[data-item]").forEach(function (linha) {
-      var q = num(linha.querySelector('[name$="-quantidade"]').value);
-      var p = num(linha.querySelector('[name$="-preco_unitario"]').value);
-      var sub = Math.round(q * p * 100) / 100;
-      linha.querySelector("[data-subtotal]").textContent = moeda.format(sub);
-      soma += sub;
+    linhas().forEach(function (linha) {
+      var q = num(linha.querySelector("[name$='-quantidade']").value);
+      var p = num(linha.querySelector("[name$='-preco_unitario']").value);
+      var desconto = centavos(num(linha.querySelector("[name$='-desconto']").value));
+      var subtotal = centavos(q * p) - desconto;
+      linha.querySelector("[data-subtotal]").textContent = moeda.format(subtotal / 100);
+      soma += subtotal;
     });
-    total.textContent = moeda.format(soma);
-  }
-
-  function renumerar() {
-    var linhas = lista.querySelectorAll("[data-item]");
-    linhas.forEach(function (linha, i) {
-      linha.querySelectorAll("[name],[id]").forEach(function (el) {
-        ["name", "id"].forEach(function (attr) {
-          var v = el.getAttribute(attr);
-          if (v) el.setAttribute(attr, v.replace(new RegExp(prefixo + "-(\\d+|__prefix__)-"), prefixo + "-" + i + "-"));
-        });
-      });
+    soma -= centavos(num(document.getElementById("id_desconto").value));
+    document.getElementById("total").textContent = moeda.format(soma / 100);
+    var dividido = document.getElementById("id_forma_pagamento").value === "DIVIDIDO";
+    var pago = 0;
+    document.querySelectorAll(".parcela-pagamento").forEach(function (campo) {
+      campo.hidden = !dividido;
+      pago += centavos(num(campo.querySelector("input").value));
     });
-    totalForms.value = linhas.length;
+    var conferencia = document.getElementById("conferencia-pagamento");
+    conferencia.textContent = dividido ? "Pagamentos: " + moeda.format(pago / 100) + " · Diferença: " + moeda.format((soma - pago) / 100) : "";
+    conferencia.classList.toggle("neg", dividido && pago !== soma);
   }
 
   function adicionar() {
-    var html = modelo.innerHTML.replace(/__prefix__/g, totalForms.value);
+    if (Number(totalForms.value) >= 100) {
+      resultado.textContent = "Limite de 100 linhas por venda.";
+      return null;
+    }
     var tmp = document.createElement("div");
-    tmp.innerHTML = html.trim();
-    lista.appendChild(tmp.firstElementChild);
-    renumerar();
+    tmp.innerHTML = modelo.innerHTML.replace(/__prefix__/g, totalForms.value).trim();
+    var linha = tmp.firstElementChild;
+    lista.appendChild(linha);
+    totalForms.value = Number(totalForms.value) + 1;
     recalcular();
+    return linha;
   }
 
-  document.getElementById("add-item").addEventListener("click", adicionar);
-
-  lista.addEventListener("click", function (e) {
-    if (!e.target.matches("[data-remover]")) return;
-    if (lista.querySelectorAll("[data-item]").length <= 1) {
-      // mantém ao menos uma linha: apenas limpa
-      lista.querySelectorAll("input").forEach(function (i) { if (i.type !== "hidden") i.value = ""; });
-      lista.querySelectorAll("select").forEach(function (s) { s.value = ""; });
+  function adicionarBusca() {
+    var texto = normalizar(busca.value.trim());
+    if (!texto) { busca.focus(); return; }
+    var exatos = Array.from(catalogo.values()).filter(function (p) {
+      return (p.codigo && normalizar(p.codigo) === texto) || normalizar(p.rotulo) === texto;
+    });
+    var encontrados = exatos.length ? exatos : Array.from(catalogo.values()).filter(function (p) {
+      return normalizar(p.nome).includes(texto);
+    });
+    if (encontrados.length !== 1) {
+      resultado.textContent = encontrados.length ? "Escolha um produto nas sugestões para distinguir os resultados." : "Produto não encontrado. Confira o nome ou o código cadastrado.";
+      return;
+    }
+    var produto = encontrados[0];
+    var linha = linhas().find(function (r) { return r.querySelector("[name$='-produto']").value === produto.id; });
+    if (linha) {
+      var quantidade = linha.querySelector("[name$='-quantidade']");
+      quantidade.value = String(Math.round((num(quantidade.value) + 1) * 1000) / 1000);
     } else {
-      e.target.closest("[data-item]").remove();
-      renumerar();
+      linha = linhas().find(function (r) { return !r.querySelector("[name$='-produto']").value; }) || adicionar();
+      if (!linha) return;
+      linha.querySelector("[name$='-produto']").value = produto.id;
+      linha.querySelector("[name$='-quantidade']").value = "1";
+      linha.querySelector("[name$='-preco_unitario']").value = produto.preco;
+      linha.querySelector("[name$='-desconto']").value = "0";
+    }
+    busca.value = "";
+    resultado.textContent = produto.nome + " adicionado à venda.";
+    recalcular();
+    busca.focus();
+  }
+
+  document.getElementById("adicionar-busca").addEventListener("click", adicionarBusca);
+  busca.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { event.preventDefault(); adicionarBusca(); }
+  });
+  document.getElementById("add-item").addEventListener("click", adicionar);
+  lista.addEventListener("click", function (event) {
+    if (!event.target.matches("[data-remover]")) return;
+    var linha = event.target.closest("[data-item]");
+    linha.querySelector("[name$='-DELETE']").checked = true;
+    linha.hidden = true;
+    if (!linhas().length) adicionar();
+    recalcular();
+  });
+  lista.addEventListener("change", function (event) {
+    if (event.target.matches("select[name$='-produto']")) {
+      var option = event.target.selectedOptions[0];
+      var linha = event.target.closest("[data-item]");
+      if (option && option.dataset.preco) linha.querySelector("[name$='-preco_unitario']").value = option.dataset.preco;
+      if (!linha.querySelector("[name$='-quantidade']").value) linha.querySelector("[name$='-quantidade']").value = "1";
     }
     recalcular();
   });
-
-  lista.addEventListener("change", function (e) {
-    if (e.target.matches('select[name$="-produto"]')) {
-      var opt = e.target.options[e.target.selectedIndex];
-      var linha = e.target.closest("[data-item]");
-      var preco = linha.querySelector('[name$="-preco_unitario"]');
-      if (opt && opt.dataset.preco) preco.value = opt.dataset.preco;
-      var qtd = linha.querySelector('[name$="-quantidade"]');
-      if (!qtd.value) qtd.value = "1";
-    }
-    recalcular();
-  });
-  lista.addEventListener("input", recalcular);
-
+  form.addEventListener("input", recalcular);
+  form.addEventListener("change", recalcular);
+  form.addEventListener("submit", function () { form.querySelector("button[type='submit']").disabled = true; });
+  window.addEventListener("pageshow", function () { form.querySelector("button[type='submit']").disabled = false; });
+  lista.querySelectorAll("[data-item]").forEach(function (r) { r.hidden = r.querySelector("[name$='-DELETE']").checked; });
   recalcular();
+  if (window.matchMedia("(min-width: 981px)").matches) busca.focus();
 })();

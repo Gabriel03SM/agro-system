@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2f6b3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="{% url 'manifesto' %}">
+<link rel="icon" href="{% static 'icons/agro-192.png' %}" type="image/png">
+<link rel="apple-touch-icon" href="{% static 'icons/agro-192.png' %}">
 <title>{% block title %}Início{% endblock %} · {{ NOME_LOJA }}</title>
 <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
@@ -11,13 +16,28 @@
 <header class="topo">
   <div class="wrap topo-in">
     <a class="marca" href="{% url 'dashboard' %}">🌾 {{ NOME_LOJA }}</a>
-    <nav>
+    <button type="button" id="abrir-menu" class="btn menu-toggle" aria-controls="menu-principal" aria-expanded="false">Menu</button>
+    <nav id="menu-principal" aria-label="Navegação principal">
+      {% if pode_financeiro %}
       <a href="{% url 'venda_nova' %}" class="destaque">+ Nova venda</a>
       <a href="{% url 'venda_lista' %}">Vendas</a>
       <a href="{% url 'caixa' %}">Caixa</a>
+      <a href="{% url 'cliente_lista' %}">Clientes / fiado</a>
+      {% endif %}
       <a href="{% url 'produto_lista' %}">Produtos</a>
+      {% if pode_estoque %}
+      <a href="{% url 'fornecedor_lista' %}">Fornecedores</a>
       <a href="{% url 'categoria_lista' %}">Categorias</a>
+      <a href="{% url 'lote_lista' %}">Lotes / validade</a>
+      {% endif %}
+      {% if pode_gerir %}
+      <a href="{% url 'conta_lista' %}">Contas a pagar</a>
+      <a href="{% url 'relatorio' %}">Relatórios</a>
+      <a href="{% url 'usuario_lista' %}">Usuários</a>
+      <a href="{% url 'auditoria_lista' %}">Histórico</a>
+      {% endif %}
       {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+      <button type="button" class="link" id="instalar-app" hidden>Instalar no celular</button>
       <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sair</button></form>
     </nav>
   </div>
@@ -28,5 +48,6 @@
   {% block content %}{% endblock %}
 </main>
 {% block scripts %}{% endblock %}
+<script src="{% static 'js/app.js' %}" defer></script>
 </body>
 </html>

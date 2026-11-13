@@ -3,6 +3,10 @@
 {% block content %}
 <div class="cabeca"><h1>Caixa</h1>
   <div><a class="btn perigo" href="{% url 'movimento_novo' %}?tipo=SAIDA">− Saída de caixa</a> <a class="btn" href="{% url 'movimento_novo' %}?tipo=ENTRADA">+ Entrada avulsa</a></div></div>
+<section class="card">
+{% if caixa_aberto %}<div class="cabeca"><div><strong>Caixa #{{ caixa_aberto.pk }} aberto</strong><small>{{ caixa_aberto.aberto_em|date:"d/m/Y H:i" }} por {{ caixa_aberto.aberto_por }} · Troco inicial: R$ {{ caixa_aberto.troco_inicial|floatformat:"2g" }}</small></div><a class="btn" href="{% url 'caixa_fechar' caixa_aberto.pk %}">Conferir e fechar caixa</a></div>
+{% else %}<div class="cabeca"><span>Caixa fechado. Abra-o antes de registrar vendas e recebimentos.</span><a class="btn primario" href="{% url 'caixa_abrir' %}">Abrir caixa</a></div>{% endif %}
+</section>
 <form method="get" class="filtros">
   <label>De <input type="date" name="de" value="{{ de|date:'Y-m-d' }}"></label>
   <label>Até <input type="date" name="ate" value="{{ ate|date:'Y-m-d' }}"></label>
@@ -12,7 +16,7 @@
   <div class="card kpi"><span>Vendas recebidas</span><strong>R$ {{ r.recebido|floatformat:"2g" }}</strong><small>{{ r.qtd_vendas }} venda(s), sem fiado</small></div>
   <div class="card kpi"><span>Outras entradas</span><strong class="pos">R$ {{ r.entradas|floatformat:"2g" }}</strong></div>
   <div class="card kpi"><span>Saídas</span><strong class="neg">R$ {{ r.saidas|floatformat:"2g" }}</strong></div>
-  <div class="card kpi"><span>Saldo do período</span><strong class="{% if r.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ r.saldo|floatformat:"2g" }}</strong>{% if r.fiado %}<small>Fiado a receber: R$ {{ r.fiado|floatformat:"2g" }}</small>{% endif %}</div>
+  <div class="card kpi"><span>Saldo do período (todas as formas)</span><strong class="{% if r.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ r.saldo|floatformat:"2g" }}</strong>{% if r.fiado %}<small>Vendido a prazo no período: R$ {{ r.fiado|floatformat:"2g" }}</small>{% endif %}<a href="{% url 'cliente_lista' %}?devedores=1">Consultar fiados pendentes</a></div>
 </div>
 <div class="duas">
   <section class="card"><h2>Vendas por forma de pagamento</h2>
@@ -21,10 +25,11 @@
   </section>
   <section class="card"><h2>Lançamentos do período</h2>
     {% for m in movimentos %}
-      <div class="linha"><span>{{ m.data|date:"d/m H:i" }} · {{ m.descricao }}<br><small class="mudo">{{ m.get_motivo_display }}{% if m.criado_por %} · {{ m.criado_por }}{% endif %}</small></span>
+      <div class="linha"><span>{{ m.data|date:"d/m H:i" }} · {{ m.descricao }}<br><small class="mudo">{{ m.get_motivo_display }} · {{ m.get_forma_display }}{% if m.criado_por %} · {{ m.criado_por }}{% endif %}</small></span>
       <span class="{% if m.tipo == 'SAIDA' %}neg{% else %}pos{% endif %}">{% if m.tipo == 'SAIDA' %}−{% else %}+{% endif %} R$ {{ m.valor|floatformat:"2g" }}
       {% if user.is_staff %}<a href="{% url 'movimento_excluir' m.pk %}" class="neg" title="Excluir">✕</a>{% endif %}</span></div>
     {% empty %}<p class="mudo">Sem lançamentos no período.</p>{% endfor %}
   </section>
 </div>
+<section class="card"><h2>Últimos fechamentos</h2><div class="tabela-wrap"><table><thead><tr><th>Caixa / fechamento</th><th>Responsável</th><th class="num">Esperado em dinheiro</th><th class="num">Contado</th><th class="num">Diferença</th></tr></thead><tbody>{% for c in fechamentos %}<tr><td>#{{ c.pk }} · {{ c.fechado_em|date:"d/m/Y H:i" }}<small>{{ c.observacao }}</small></td><td>{{ c.fechado_por }}</td><td class="num">R$ {{ c.dinheiro_esperado|floatformat:"2g" }}</td><td class="num">R$ {{ c.dinheiro_contado|floatformat:"2g" }}</td><td class="num {% if c.diferenca %}neg{% endif %}">R$ {{ c.diferenca|floatformat:"2g" }}</td></tr>{% empty %}<tr><td colspan="5">Nenhum caixa fechado ainda.</td></tr>{% endfor %}</tbody></table></div></section>
 {% endblock %}

@@ -2,9 +2,9 @@
 
 Django + PostgreSQL (Supabase) + deploy no Render.
 
-**O que faz:** cadastro de produtos e categorias, controle de estoque (com histórico), vendas (com baixa automática de estoque), caixa (entradas, saídas, saldo por período, fiado), alertas de estoque baixo e login por usuário.
+**O que faz:** produtos, clientes e fornecedores; vendas com código de barras, descontos e pagamentos divididos; fiado com baixa parcial/total; estoque por lote e validade; abertura e fechamento de caixa; contas a pagar; relatórios CSV/PDF; importação CSV; comprovante não fiscal e histórico de alterações.
 
-**Perfis:** usuário comum registra vendas, produtos e lançamentos. Usuário **gerente** (`is_staff`) também cancela vendas, exclui lançamentos/categorias e acessa `/admin/`.
+**Perfis:** gerente gerencia a loja e os acessos; caixa registra vendas, fiado e movimentações; estoquista cuida dos produtos, fornecedores e lotes. Os acessos são configurados em **Usuários**.
 
 ---
 
@@ -19,7 +19,7 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
-Abra http://127.0.0.1:8000. Sem `DATABASE_URL` no `.env`, usa SQLite local. Testes: `python manage.py test`.
+Abra http://127.0.0.1:8000. Sem `DATABASE_URL` no `.env`, usa SQLite local. Testes: `python manage.py test` (usa configuração e banco isolados).
 
 ---
 
@@ -54,7 +54,7 @@ Crie um repositório e envie esta pasta (o `.gitignore` já protege `.env` e `db
 | `PYTHON_VERSION` | `3.12.7` |
 
 3. Faça o deploy. A cada deploy o `build.sh` instala dependências, coleta estáticos, aplica migrações, ativa a segurança RLS no Supabase e cria o gerente (só se ainda não existir).
-4. Acesse a URL `https://SEU-APP.onrender.com`, entre com o gerente e crie os funcionários em **Admin → Usuários** (sem marcar "membro da equipe").
+4. Acesse a URL `https://SEU-APP.onrender.com`, entre com o gerente e crie os funcionários em **Usuários**, escolhendo caixa ou estoquista.
 
 ### Segurança no Supabase
 O comando `ativar_rls` (já no build) liga o Row Level Security em todas as tabelas, bloqueando acesso pela API pública do Supabase. O Django conecta com o usuário `postgres` e continua funcionando. Não compartilhe a senha do banco.
@@ -76,9 +76,13 @@ build.sh  render.yaml  requirements.txt  .env.example
 ## Fluxo de dados
 - **Venda** → baixa estoque (bloqueia se faltar) e entra no caixa (exceto **fiado**, que aparece como "a receber").
 - **Cancelar venda** (gerente) → devolve o estoque e sai dos totais.
-- **Recebimento de fiado** → registre como *Entrada avulsa* (motivo "Recebimento de fiado").
+- **Recebimento de fiado** → abra a ficha do cliente e registre o valor recebido, total ou parcial. O sistema baixa as dívidas mais antigas e lança uma única entrada no caixa.
 - **Saída de caixa** → fornecedor, despesa, salário, retirada etc.
 - **Estoque** → entrada de mercadoria, perda e contagem em "Ajustar estoque"; tudo fica no histórico.
 
-## Ideias para evoluir
-Controle de fiado por cliente, cadastro de clientes/fornecedores, contas a pagar, relatórios em PDF/Excel, importação de produtos por planilha, lote/validade.
+## Evolução e operação
+Consulte [o acompanhamento das três fases](docs/IMPLEMENTACAO.md). Abra o caixa com o troco inicial antes de vender. Ao registrar entrada de mercadoria, selecione o fornecedor e o custo unitário. A conferência de fechamento considera somente dinheiro físico; Pix e cartões continuam no saldo financeiro do período.
+
+Testes isolados: `python manage.py test --settings=config.test_settings`.
+
+Para ativar backup, monitoramento, instalar no celular e configurar domínio, siga [o guia de produção](docs/PRODUCAO.md). Os agendamentos dependem de os workflows estarem na branch padrão; o backup também exige uma credencial de banco e uma chave pública configuradas no GitHub.

@@ -1,0 +1,47 @@
+name: Backup diário cifrado
+
+on:
+  schedule:
+    - cron: "37 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-banco
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: postgres:18-bookworm
+    services:
+      scratch:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_PASSWORD: teste-efemero
+          POSTGRES_DB: agro_restore
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: bash scripts/instalar_age.sh
+      - name: Exportar banco, testar restauração e cifrar
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+          RESTORE_TEST_DATABASE_URL: postgresql://postgres:teste-efemero@scratch:5432/agro_restore?sslmode=disable
+        run: python3 scripts/backup_banco.py --destino backups
+      - uses: actions/upload-artifact@v6
+        with:
+          name: backup-cifrado-${{ github.run_id }}
+          path: |
+            backups/*.age
+            backups/*.sha256
+          if-no-files-found: error
+          retention-days: 14

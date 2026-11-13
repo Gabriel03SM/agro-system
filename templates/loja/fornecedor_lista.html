@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Fornecedores{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Fornecedores</h1><a class="btn primario" href="{% url 'fornecedor_novo' %}">Novo fornecedor</a></div>
+<form method="get" class="filtros"><input type="search" name="q" value="{{ q }}" placeholder="Nome ou documento" aria-label="Buscar fornecedor"><button class="btn">Buscar</button></form>
+<div class="tabela-wrap"><table><thead><tr><th>Fornecedor</th><th>Documento</th><th>Contato</th></tr></thead><tbody>{% for f in page %}<tr><td><a href="{% url 'fornecedor_detalhe' f.pk %}">{{ f.nome }}</a>{% if not f.ativo %} <span class="badge cinza">inativo</span>{% endif %}</td><td>{{ f.documento|default:"—" }}</td><td>{{ f.telefone }}<small>{{ f.email }}</small></td></tr>{% empty %}<tr><td colspan="3">Cadastre um fornecedor para registrar as compras de mercadoria.</td></tr>{% endfor %}</tbody></table></div>{% include "loja/_paginacao.html" %}
+{% endblock %}

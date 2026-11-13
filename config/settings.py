@@ -1,6 +1,8 @@
 import os
 import sys
+from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -31,6 +33,14 @@ if RENDER_HOST:
     ALLOWED_HOSTS.append(RENDER_HOST)
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOST}")
 
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+if PUBLIC_BASE_URL:
+    _public = urlsplit(PUBLIC_BASE_URL)
+    if _public.scheme != "https" or not _public.hostname or _public.path:
+        raise ImproperlyConfigured("PUBLIC_BASE_URL deve ser uma origem HTTPS, sem caminho.")
+    ALLOWED_HOSTS.append(_public.hostname)
+    CSRF_TRUSTED_ORIGINS.append(PUBLIC_BASE_URL)
+
 NOME_LOJA = os.environ.get("NOME_LOJA", "Agropecuária")
 
 INSTALLED_APPS = [
@@ -40,6 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
     "loja",
 ]
 
@@ -50,8 +61,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "loja.auditoria.AuditoriaMiddleware",
+    "config.middleware.PaginasPrivadasMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -99,10 +113,22 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "config.password_validation.DiversidadeSenhaValidator"},
 ]
+
+AUTHENTICATION_BACKENDS = ["axes.backends.AxesStandaloneBackend", "django.contrib.auth.backends.ModelBackend"]
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
+AXES_RESET_ON_SUCCESS = True
+AXES_CLIENT_IP_CALLABLE = "config.seguranca.ip_cliente"
+AXES_LOCKOUT_TEMPLATE = "registration/bloqueado.html"
+AXES_VERBOSE = False
+SESSION_COOKIE_AGE = 60 * 60 * 8
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # --- Internacionalização --------------------------------------------------
 LANGUAGE_CODE = "pt-br"

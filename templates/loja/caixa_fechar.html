@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Fechar caixa #{{ caixa.pk }}{% endblock %}
+{% block content %}
+<div class="card estreito"><h1>Conferir e fechar caixa #{{ caixa.pk }}</h1><p>Aberto por {{ caixa.aberto_por }} em {{ caixa.aberto_em|date:"d/m/Y H:i" }}.</p><div class="linha"><span>Troco inicial</span><strong>R$ {{ caixa.troco_inicial|floatformat:"2g" }}</strong></div><div class="linha"><span>Dinheiro esperado na gaveta</span><strong>R$ {{ esperado|floatformat:"2g" }}</strong></div><p class="mudo">Pix, cartões e fiado não entram na contagem do dinheiro. Após o fechamento, as vendas e os lançamentos deste caixa ficam preservados.</p><form method="post" novalidate>{% csrf_token %}{% include "loja/_campos.html" %}<div class="acoes"><button class="btn primario">Confirmar fechamento</button><a class="btn" href="{% url 'caixa' %}">Voltar ao caixa</a></div></form></div>
+{% endblock %}
