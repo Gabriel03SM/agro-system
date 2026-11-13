@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Importar produtos{% endblock %}
+{% block content %}
+<h1>Importar catálogo de produtos</h1><p>Use CSV UTF-8, separado por ponto e vírgula ou vírgula. Valores como 100,00 devem estar em uma única célula. O estoque existente é preservado; novas mercadorias entram pela tela de estoque, com fornecedor.</p><p><a class="btn" href="?modelo=1">Baixar modelo CSV</a></p>
+<section class="card estreito"><form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}{% include "loja/_campos.html" %}<button class="btn primario">Conferir arquivo</button></form></section>
+{% if previa %}<section class="card"><h2>Conferência: {{ previa|length }} produto(s)</h2><p>Mostrando até 100 linhas. A confirmação importa o arquivo inteiro em uma única operação; uma falha cancela toda a importação.</p><div class="tabela-wrap"><table><thead><tr><th>Ação</th><th>Nome</th><th>Código</th><th>Categoria</th><th class="num">Preço de venda</th></tr></thead><tbody>{% for p in previa|slice:':100' %}<tr><td>{{ p.acao }}</td><td>{{ p.dados.nome }}</td><td>{{ p.dados.codigo }}</td><td>{{ p.categoria_nome }}</td><td class="num">R$ {{ p.dados.preco_venda }}</td></tr>{% endfor %}</tbody></table></div><form method="post">{% csrf_token %}<input type="hidden" name="confirmar" value="1"><button class="btn primario">Confirmar importação</button></form></section>{% endif %}
+{% endblock %}

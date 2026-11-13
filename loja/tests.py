@@ -53,13 +53,13 @@ class ServicosTest(BaseTest):
         self.assertEqual(self.racao.estoque_atual, D("10"))
 
     def test_ajustes(self):
-        ajustar_estoque(self.racao, "ENTRADA", D("5"), "", self.func, self.fornecedor, D("70"))
-        ajustar_estoque(self.racao, "PERDA", D("2"), "", self.func)
-        ajustar_estoque(self.racao, "AJUSTE", D("20"), "contagem", self.func)
+        ajustar_estoque(self.racao, "ENTRADA", D("5"), "", self.gerente, self.fornecedor, D("70"))
+        ajustar_estoque(self.racao, "PERDA", D("2"), "", self.gerente)
+        ajustar_estoque(self.racao, "AJUSTE", D("20"), "contagem", self.gerente)
         self.racao.refresh_from_db()
         self.assertEqual(self.racao.estoque_atual, D("20"))
         with self.assertRaises(EstoqueInsuficiente):
-            ajustar_estoque(self.racao, "PERDA", D("99"), "", self.func)
+            ajustar_estoque(self.racao, "PERDA", D("99"), "", self.gerente)
 
 
 class TelasTest(BaseTest):
@@ -69,7 +69,7 @@ class TelasTest(BaseTest):
         self.assertIn("/entrar/", r.url)
 
     def test_paginas_principais(self):
-        self.client.login(username="func", password="x12345678")
+        self.client.login(username="gerente", password="x12345678")
         for nome in ["dashboard", "produto_lista", "produto_novo", "categoria_lista", "venda_lista", "venda_nova",
                      "caixa", "movimento_novo"]:
             self.assertEqual(self.client.get(reverse(nome)).status_code, 200, nome)

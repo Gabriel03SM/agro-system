@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Contas a pagar{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>Contas a pagar</h1><a class="btn primario" href="{% url 'conta_nova' %}">Nova conta</a></div>
+<form method="get" class="filtros"><select name="filtro" aria-label="Filtrar contas"><option value="abertas" {% if filtro == 'abertas' %}selected{% endif %}>Em aberto</option><option value="vencidas" {% if filtro == 'vencidas' %}selected{% endif %}>Vencidas</option><option value="pagas" {% if filtro == 'pagas' %}selected{% endif %}>Pagas</option><option value="todas" {% if filtro == 'todas' %}selected{% endif %}>Todas</option></select><button class="btn">Filtrar</button></form>
+<div class="tabela-wrap"><table><thead><tr><th>Conta / fornecedor</th><th>Vencimento</th><th class="num">Total</th><th class="num">Saldo a pagar</th></tr></thead><tbody>{% for c in page %}<tr><td><a href="{% url 'conta_detalhe' c.pk %}">{{ c.descricao }}</a><small>{{ c.fornecedor|default:"—" }}</small></td><td>{{ c.vencimento|date:"d/m/Y" }} {% if c.vencida %}<span class="badge">vencida</span>{% endif %}</td><td class="num">R$ {{ c.valor|floatformat:"2g" }}</td><td class="num">R$ {{ c.saldo|floatformat:"2g" }}</td></tr>{% empty %}<tr><td colspan="4">Nenhuma conta neste filtro.</td></tr>{% endfor %}</tbody></table></div>{% include "loja/_paginacao.html" %}
+{% endblock %}

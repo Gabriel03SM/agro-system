@@ -12,11 +12,15 @@ A migração preserva as vendas e cria clientes a partir dos nomes antigos. Nome
 
 ## Fase 2 — gestão
 
-Em implementação: relatórios com CSV/PDF, lote e validade, contas a pagar, importação CSV, perfis gerente/caixa/estoquista e auditoria.
+Implementada: relatórios com CSV/PDF, lote e validade, contas a pagar com pagamentos parciais, importação CSV com conferência, perfis gerente/caixa/estoquista e auditoria.
+
+Lotes válidos são consumidos por validade mais próxima. Ativar lotes em um produto existente cria o lote SALDO-INICIAL; confira sua validade. Itens antigos sem custo histórico não recebem estimativa de lucro. O relatório identifica os custos ausentes.
+
+O CSV cria o catálogo com estoque zero. Atualizações por código só ocorrem com a opção explícita de atualizar e preservam estoque e campos ausentes no arquivo.
 
 ## Fase 3 — produção
 
-Pendente: backup automático, monitoramento, proteção de login/senhas, PWA/layout móvel, GitHub Actions e testes das telas novas.
+Em implementação: backup automático, monitoramento, proteção de login/senhas, PWA/layout móvel, GitHub Actions e testes das telas novas.
 
 Ainda não há domínio próprio comprado. As configurações dependentes de serviços externos e secrets serão documentadas; não são consideradas ativas sem verificação no serviço.
 

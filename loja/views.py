@@ -12,9 +12,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import (CategoriaForm, EstoqueForm, ItemVendaFormSet, MovimentoCaixaForm, ProdutoForm, VendaForm)
-from .models import Categoria, MovimentoCaixa, MovimentoEstoque, PagamentoVenda, Produto, SessaoCaixa, Venda
+from .models import Categoria, LoteProduto, MovimentoCaixa, MovimentoEstoque, PagamentoVenda, Produto, SessaoCaixa, Venda
 from .services import (RegraNegocio, ajustar_estoque, cancelar_venda, corrigir_venda,
                        excluir_movimento, registrar_movimento, registrar_venda)
+from .gestao_services import salvar_produto
+from .permissoes import cargo_usuario, estoque_required, financeiro_required
 
 ZERO = Decimal("0")
 
@@ -24,7 +26,7 @@ def staff_required(view):
     @login_required
     @wraps(view)
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_staff:
+        if cargo_usuario(request.user) != "GERENTE":
             raise PermissionDenied
         return view(request, *args, **kwargs)
     return wrapper
@@ -76,15 +78,23 @@ def resumo(ini, fim):
 # ---------- dashboard ----------
 @login_required
 def dashboard(request):
+    if cargo_usuario(request.user) == "ESTOQUISTA":
+        return redirect("lote_lista")
     hoje = timezone.localdate()
     baixo = Produto.objects.filter(ativo=True, estoque_atual__lte=F("estoque_minimo"))
+    lotes = LoteProduto.objects.filter(quantidade__gt=0).filter(
+        Q(validade__lte=hoje + timedelta(days=30)) | Q(validade__isnull=True)).select_related("produto")
     ctx = {
         "hoje": resumo(*limites(hoje, hoje)),
         "mes": resumo(*limites(hoje.replace(day=1), hoje)),
         "estoque_baixo": baixo.order_by("estoque_atual")[:10],
         "qtd_estoque_baixo": baixo.count(),
         "ultimas_vendas": Venda.objects.all()[:8],
+        "lotes_alerta": lotes[:5], "qtd_lotes_alerta": lotes.count(),
     }
+    if cargo_usuario(request.user) == "GERENTE":
+        from .gestao_views import contas_com_saldo
+        ctx["qtd_contas_vencidas"] = contas_com_saldo().filter(restante__gt=0, vencimento__lt=hoje).count()
     return render(request, "loja/dashboard.html", ctx)
 
 
@@ -107,39 +117,45 @@ def produto_lista(request):
                   {"page": page, "qs": qs, "q": q, "status": status, "baixo": request.GET.get("baixo")})
 
 
-@login_required
+@estoque_required
 def produto_novo(request):
     form = ProdutoForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        produto = form.save()
-        if produto.estoque_atual:
-            MovimentoEstoque.objects.create(produto=produto, quantidade=produto.estoque_atual, motivo="AJUSTE",
-                                            observacao="Estoque inicial", usuario=request.user)
-        messages.success(request, f"Produto “{produto.nome}” cadastrado.")
-        return redirect("produto_lista")
+        try:
+            produto = salvar_produto(form, request.user)
+        except RegraNegocio as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"Produto “{produto.nome}” cadastrado.")
+            return redirect("produto_lista")
     return render(request, "loja/form.html", {"form": form, "titulo": "Novo produto", "voltar": "produto_lista"})
 
 
-@login_required
+@estoque_required
 def produto_editar(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
     form = ProdutoForm(request.POST or None, instance=produto)
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Produto atualizado.")
-        return redirect("produto_lista")
+        try:
+            salvar_produto(form, request.user)
+        except RegraNegocio as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Produto atualizado.")
+            return redirect("produto_lista")
     return render(request, "loja/form.html", {"form": form, "titulo": f"Editar: {produto.nome}", "voltar": "produto_lista"})
 
 
-@login_required
+@estoque_required
 def produto_estoque(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
-    form = EstoqueForm(request.POST or None)
+    form = EstoqueForm(request.POST or None, produto=produto)
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
         try:
             ajustar_estoque(produto, d["tipo"], d["quantidade"], d["observacao"], request.user,
-                             fornecedor=d.get("fornecedor"), custo_unitario=d.get("custo_unitario"))
+                             fornecedor=d.get("fornecedor"), custo_unitario=d.get("custo_unitario"),
+                             lote=d.get("lote"), numero_lote=d.get("numero_lote", ""), validade=d.get("validade"))
         except RegraNegocio as e:
             form.add_error("quantidade", str(e))
         else:
@@ -150,7 +166,7 @@ def produto_estoque(request, pk):
 
 
 # ---------- categorias ----------
-@login_required
+@estoque_required
 def categoria_lista(request):
     form = CategoriaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -172,7 +188,7 @@ def categoria_excluir(request, pk):
 
 
 # ---------- vendas ----------
-@login_required
+@financeiro_required
 def venda_lista(request):
     vendas = Venda.objects.select_related("criado_por")
     q = request.GET.get("q", "").strip()
@@ -194,7 +210,7 @@ def venda_lista(request):
     })
 
 
-@login_required
+@financeiro_required
 def venda_nova(request):
     return _venda_form(request)
 
@@ -235,14 +251,14 @@ def _venda_form(request, venda=None):
                   "caixa_aberto": SessaoCaixa.objects.filter(aberto=True).first()})
 
 
-@login_required
+@financeiro_required
 def venda_detalhe(request, pk):
     venda = get_object_or_404(Venda.objects.select_related("criado_por", "cliente_cadastro", "caixa"), pk=pk)
     return render(request, "loja/venda_detalhe.html", {"venda": venda, "itens": venda.itens.select_related("produto"),
                   "alteracoes": venda.alteracoes.select_related("usuario")})
 
 
-@login_required
+@financeiro_required
 def venda_comprovante(request, pk):
     venda = get_object_or_404(Venda.objects.select_related("criado_por"), pk=pk)
     return render(request, "loja/comprovante.html", {"venda": venda, "itens": venda.itens.select_related("produto")})
@@ -262,7 +278,7 @@ def venda_cancelar(request, pk):
 
 
 # ---------- caixa ----------
-@login_required
+@financeiro_required
 def caixa(request):
     hoje = timezone.localdate()
     de = parse_data(request.GET.get("de"), hoje)
@@ -278,7 +294,7 @@ def caixa(request):
     })
 
 
-@login_required
+@financeiro_required
 def movimento_novo(request):
     tipo = request.GET.get("tipo", "SAIDA")
     form = MovimentoCaixaForm(request.POST or None, initial={"tipo": tipo if tipo in ("ENTRADA", "SAIDA") else "SAIDA"})

@@ -10,11 +10,12 @@ from .models import Cliente, Fornecedor, PagamentoVenda, RecebimentoFiado, Sessa
 from .services import (RegraNegocio, abrir_caixa, dinheiro_no_caixa, fechar_caixa,
                        receber_fiado, vincular_recebimento_anterior)
 from .views import paginar
+from .permissoes import cargo_usuario, estoque_required, financeiro_required
 
 ZERO = Decimal("0")
 
 
-@login_required
+@financeiro_required
 def cliente_lista(request):
     q = request.GET.get("q", "").strip()
     clientes = Cliente.objects.all()
@@ -33,7 +34,7 @@ def cliente_lista(request):
         "devedores": request.GET.get("devedores"), "total_devedor": sum(devidos.values(), ZERO) - sum(recebidos.values(), ZERO)})
 
 
-@login_required
+@financeiro_required
 def cliente_form(request, pk=None):
     cliente = get_object_or_404(Cliente, pk=pk) if pk else None
     form = ClienteForm(request.POST or None, instance=cliente)
@@ -45,13 +46,13 @@ def cliente_form(request, pk=None):
                                               "voltar": "cliente_lista"})
 
 
-@login_required
+@financeiro_required
 def cliente_detalhe(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     vincular = request.POST.get("acao") == "vincular_anterior"
     form = RecebimentoForm(request.POST if request.method == "POST" and not vincular else None,
                            initial={"valor": cliente.saldo_devedor})
-    anterior = RecebimentoAnteriorForm(request.POST if vincular else None, prefix="anterior") if request.user.is_staff else None
+    anterior = RecebimentoAnteriorForm(request.POST if vincular else None, prefix="anterior") if cargo_usuario(request.user) == "GERENTE" else None
     if vincular and anterior and anterior.is_valid():
         try:
             vincular_recebimento_anterior(cliente, anterior.cleaned_data["movimento"], request.user)
@@ -75,7 +76,7 @@ def cliente_detalhe(request, pk):
             "venda", "movimento__criado_por").order_by("-movimento__data", "-id")})
 
 
-@login_required
+@estoque_required
 def fornecedor_lista(request):
     q = request.GET.get("q", "").strip()
     fornecedores = Fornecedor.objects.all()
@@ -85,7 +86,7 @@ def fornecedor_lista(request):
     return render(request, "loja/fornecedor_lista.html", {"page": page, "qs": qs, "q": q})
 
 
-@login_required
+@estoque_required
 def fornecedor_form(request, pk=None):
     fornecedor = get_object_or_404(Fornecedor, pk=pk) if pk else None
     form = FornecedorForm(request.POST or None, instance=fornecedor)
@@ -97,14 +98,14 @@ def fornecedor_form(request, pk=None):
                                               "voltar": "fornecedor_lista"})
 
 
-@login_required
+@estoque_required
 def fornecedor_detalhe(request, pk):
     fornecedor = get_object_or_404(Fornecedor, pk=pk)
     page, qs = paginar(request, fornecedor.entradas.select_related("produto", "usuario"))
     return render(request, "loja/fornecedor_detalhe.html", {"fornecedor": fornecedor, "page": page, "qs": qs})
 
 
-@login_required
+@financeiro_required
 def caixa_abrir(request):
     form = AbrirCaixaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -118,7 +119,7 @@ def caixa_abrir(request):
     return render(request, "loja/form.html", {"form": form, "titulo": "Abrir caixa", "voltar": "caixa"})
 
 
-@login_required
+@financeiro_required
 def caixa_fechar(request, pk):
     caixa = get_object_or_404(SessaoCaixa, pk=pk)
     form = FecharCaixaForm(request.POST or None)

@@ -1,7 +1,8 @@
 from django.contrib import admin
 
-from .models import (AlteracaoVenda, Categoria, Cliente, Fornecedor, ItemVenda, MovimentoCaixa,
-                     MovimentoEstoque, PagamentoVenda, Produto, RecebimentoFiado, SessaoCaixa, Venda)
+from .models import (AlteracaoVenda, Categoria, Cliente, ContaPagar, Fornecedor, ItemVenda, LoteProduto, MovimentoCaixa,
+                     MovimentoEstoque, PagamentoConta, PagamentoVenda, PerfilUsuario, Produto,
+                     RecebimentoFiado, RegistroAuditoria, SessaoCaixa, Venda)
 
 
 class OperacaoAdmin(admin.ModelAdmin):
@@ -70,5 +71,8 @@ class MovimentoEstoqueAdmin(OperacaoAdmin):
     list_filter = ["motivo"]
 
 
-for modelo in (SessaoCaixa, PagamentoVenda, RecebimentoFiado, AlteracaoVenda):
+for modelo in (SessaoCaixa, PagamentoVenda, RecebimentoFiado, AlteracaoVenda, LoteProduto,
+                ContaPagar, PagamentoConta, RegistroAuditoria):
     admin.site.register(modelo, OperacaoAdmin)
+
+admin.site.register(PerfilUsuario)

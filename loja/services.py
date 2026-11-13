@@ -7,6 +7,9 @@ from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from .auditoria import com_usuario
+from .lotes import ajustar_lote, consumir, devolver
+from .permissoes import cargo_usuario
 from .models import (AlteracaoVenda, Cliente, ItemVenda, MovimentoCaixa, MovimentoEstoque,
                      PagamentoVenda, Produto, RecebimentoFiado, SessaoCaixa, Venda)
 
@@ -58,7 +61,10 @@ def _validar_data(data, caixa):
 
 
 @transaction.atomic
+@com_usuario
 def abrir_caixa(troco, usuario):
+    if cargo_usuario(usuario) not in ("GERENTE", "CAIXA"):
+        raise RegraNegocio("Seu perfil não permite operações financeiras.")
     troco = decimal_valido(troco, nome="Troco inicial")
     if SessaoCaixa.objects.filter(aberto=True).exists():
         raise RegraNegocio("Já existe um caixa aberto. Feche-o antes de abrir outro.")
@@ -79,11 +85,12 @@ def dinheiro_no_caixa(caixa):
 
 
 @transaction.atomic
+@com_usuario
 def fechar_caixa(caixa, contado, usuario, observacao=""):
     caixa = SessaoCaixa.objects.select_for_update().get(pk=caixa.pk)
     if not caixa.aberto:
         raise RegraNegocio("Este caixa já foi fechado.")
-    if usuario.pk != caixa.aberto_por_id and not usuario.is_staff:
+    if usuario.pk != caixa.aberto_por_id and cargo_usuario(usuario) != "GERENTE":
         raise RegraNegocio("Somente quem abriu o caixa ou um gerente pode fechá-lo.")
     caixa.dinheiro_contado = decimal_valido(contado, nome="Dinheiro contado")
     caixa.dinheiro_esperado = dinheiro_no_caixa(caixa)
@@ -149,14 +156,19 @@ def _pagamentos(venda, total, pagamentos):
 def _gravar_itens(venda, itens, produtos, parcelas, custos=None):
     for item in itens:
         produto = produtos[item["produto"].pk]
-        ItemVenda.objects.create(venda=venda, produto=produto, quantidade=item["quantidade"],
+        item_salvo = ItemVenda.objects.create(venda=venda, produto=produto, quantidade=item["quantidade"],
                                  preco_unitario=item["preco_unitario"], desconto=item["desconto"],
                                  preco_custo=(custos or {}).get(produto.pk, produto.preco_custo))
-    PagamentoVenda.objects.bulk_create([PagamentoVenda(venda=venda, forma=f, valor=v) for f, v in parcelas.items()])
+        consumir(item_salvo)
+    for forma, valor in parcelas.items():
+        PagamentoVenda.objects.create(venda=venda, forma=forma, valor=valor)
 
 
 @transaction.atomic
+@com_usuario
 def registrar_venda(venda, itens, usuario, pagamentos=None):
+    if cargo_usuario(usuario) not in ("GERENTE", "CAIXA"):
+        raise RegraNegocio("Seu perfil não permite operações financeiras.")
     if venda.pk:
         raise RegraNegocio("Use a correção para alterar uma venda existente.")
     venda.caixa = caixa_aberto()
@@ -195,8 +207,9 @@ def _travar_venda(venda, novo_cliente_id=None):
 
 
 @transaction.atomic
+@com_usuario
 def corrigir_venda(venda, itens, usuario, pagamentos=None, motivo="", versao=None):
-    if not usuario.is_staff:
+    if cargo_usuario(usuario) != "GERENTE":
         raise RegraNegocio("Somente um gerente pode corrigir vendas.")
     if not motivo.strip():
         raise RegraNegocio("Informe o motivo da correção.")
@@ -236,6 +249,7 @@ def corrigir_venda(venda, itens, usuario, pagamentos=None, motivo="", versao=Non
         setattr(atual, campo, getattr(venda, campo))
     atual.versao += 1
     atual.save()
+    devolver(atual)
     atual.itens.all().delete()
     atual.pagamentos.all().delete()
     _gravar_itens(atual, itens, produtos, parcelas, custos)
@@ -251,8 +265,9 @@ def corrigir_venda(venda, itens, usuario, pagamentos=None, motivo="", versao=Non
 
 
 @transaction.atomic
+@com_usuario
 def cancelar_venda(venda, usuario):
-    if not usuario.is_staff:
+    if cargo_usuario(usuario) != "GERENTE":
         raise RegraNegocio("Somente um gerente pode cancelar vendas.")
     if Venda.objects.get(pk=venda.pk).cancelada:
         return Venda.objects.get(pk=venda.pk)
@@ -265,6 +280,7 @@ def cancelar_venda(venda, usuario):
     for item in venda.itens.all():
         soma[item.produto_id] += item.quantidade
     produtos = _travar(soma)
+    devolver(venda)
     for pk, qtd in soma.items():
         produto = produtos[pk]
         produto.estoque_atual += qtd
@@ -278,7 +294,11 @@ def cancelar_venda(venda, usuario):
 
 
 @transaction.atomic
-def ajustar_estoque(produto, tipo, quantidade, observacao, usuario, fornecedor=None, custo_unitario=None):
+@com_usuario
+def ajustar_estoque(produto, tipo, quantidade, observacao, usuario, fornecedor=None, custo_unitario=None,
+                     lote=None, numero_lote="", validade=None):
+    if cargo_usuario(usuario) not in ("GERENTE", "ESTOQUISTA"):
+        raise RegraNegocio("Seu perfil não permite alterar o estoque.")
     quantidade = decimal_valido(quantidade, 3, nome="Quantidade", maximo=Decimal("999999999.999"))
     if tipo not in ("ENTRADA", "PERDA", "AJUSTE"):
         raise RegraNegocio("Tipo de ajuste inválido.")
@@ -296,18 +316,24 @@ def ajustar_estoque(produto, tipo, quantidade, observacao, usuario, fornecedor=N
         delta = -quantidade
     else:
         delta = quantidade - p.estoque_atual
+    lote_movimento = None
+    if p.controla_lote:
+        lote_movimento, delta = ajustar_lote(p, tipo, quantidade, p.preco_custo, lote, numero_lote, validade)
     if delta == ZERO:
         return p
     p.estoque_atual = decimal_valido(p.estoque_atual + delta, 3, nome="Estoque", maximo=Decimal("999999999.999"))
     p.save(update_fields=["estoque_atual", "preco_custo"])
     MovimentoEstoque.objects.create(produto=p, quantidade=delta, motivo=tipo, observacao=observacao, usuario=usuario,
                                     fornecedor=fornecedor if tipo == "ENTRADA" else None,
-                                    custo_unitario=p.preco_custo if tipo == "ENTRADA" else None)
+                                    custo_unitario=p.preco_custo if tipo == "ENTRADA" else None, lote=lote_movimento)
     return p
 
 
 @transaction.atomic
+@com_usuario
 def registrar_movimento(movimento, usuario):
+    if cargo_usuario(usuario) not in ("GERENTE", "CAIXA"):
+        raise RegraNegocio("Seu perfil não permite operações financeiras.")
     movimento.caixa = caixa_aberto()
     _validar_data(movimento.data, movimento.caixa)
     if movimento.forma not in FORMAS - {"FIADO"} or movimento.tipo not in ("ENTRADA", "SAIDA"):
@@ -321,21 +347,25 @@ def registrar_movimento(movimento, usuario):
 
 
 @transaction.atomic
+@com_usuario
 def excluir_movimento(movimento, usuario):
-    if not usuario.is_staff:
+    if cargo_usuario(usuario) != "GERENTE":
         raise RegraNegocio("Somente um gerente pode excluir lançamentos.")
     if movimento.caixa_id:
         caixa = SessaoCaixa.objects.select_for_update().get(pk=movimento.caixa_id)
         if not caixa.aberto:
             raise RegraNegocio("Este lançamento pertence a um caixa fechado.")
     movimento = MovimentoCaixa.objects.select_for_update().get(pk=movimento.pk)
-    if movimento.baixas_fiado.exists():
-        raise RegraNegocio("Este lançamento baixa uma dívida de cliente e não pode ser excluído avulsamente.")
+    if movimento.baixas_fiado.exists() or hasattr(movimento, "pagamento_conta"):
+        raise RegraNegocio("Este lançamento está vinculado a um recebimento ou pagamento e não pode ser excluído avulsamente.")
     movimento.delete()
 
 
 @transaction.atomic
+@com_usuario
 def receber_fiado(cliente, valor, forma, usuario):
+    if cargo_usuario(usuario) not in ("GERENTE", "CAIXA"):
+        raise RegraNegocio("Seu perfil não permite operações financeiras.")
     caixa = caixa_aberto()
     cliente = Cliente.objects.select_for_update().get(pk=cliente.pk)
     valor = decimal_valido(valor, minimo=CENTAVO, nome="Recebimento")
@@ -360,9 +390,10 @@ def receber_fiado(cliente, valor, forma, usuario):
 
 
 @transaction.atomic
+@com_usuario
 def vincular_recebimento_anterior(cliente, movimento, usuario):
     """Reconcilia uma entrada antiga sem lançar o dinheiro novamente no caixa."""
-    if not usuario.is_staff:
+    if cargo_usuario(usuario) != "GERENTE":
         raise RegraNegocio("Somente um gerente pode vincular recebimentos anteriores.")
     cliente = Cliente.objects.select_for_update().get(pk=cliente.pk)
     movimento = MovimentoCaixa.objects.select_for_update().get(pk=movimento.pk)

@@ -91,13 +91,13 @@ class OperacaoTest(BaseTest):
         self.assertEqual(cliente.saldo_devedor, D("0"))
 
     def test_entrada_vincula_fornecedor_e_atualiza_custo(self):
-        ajustar_estoque(self.racao, "ENTRADA", D("3"), "Compra NF 10", self.func, self.fornecedor, D("65.50"))
+        ajustar_estoque(self.racao, "ENTRADA", D("3"), "Compra NF 10", self.gerente, self.fornecedor, D("65.50"))
         self.racao.refresh_from_db()
         self.assertEqual(self.racao.preco_custo, D("65.50"))
         self.assertEqual(self.racao.estoque_atual, D("13"))
         self.assertEqual(self.racao.movimentos.get().fornecedor, self.fornecedor)
         with self.assertRaises(RegraNegocio):
-            ajustar_estoque(self.racao, "ENTRADA", D("1"), "", self.func)
+            ajustar_estoque(self.racao, "ENTRADA", D("1"), "", self.gerente)
 
     def test_fechamento_separa_pix_cartao_e_dinheiro_e_preserva_historico(self):
         venda = self.vender("1")

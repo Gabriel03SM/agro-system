@@ -113,6 +113,7 @@ class Produto(models.Model):
                                          validators=[MinValueValidator(ZERO)])
     ativo = models.BooleanField("Ativo", default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    controla_lote = models.BooleanField("Controlar lote e validade", default=False)
 
     class Meta:
         ordering = ["nome"]
@@ -129,6 +130,26 @@ class Produto(models.Model):
         if self.preco_venda and self.preco_venda > 0:
             return (self.preco_venda - self.preco_custo) / self.preco_venda * 100
         return None
+
+
+class LoteProduto(models.Model):
+    produto = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name="lotes")
+    numero = models.CharField("Número do lote", max_length=80)
+    validade = models.DateField("Validade", null=True, blank=True)
+    quantidade = models.DecimalField("Saldo do lote", max_digits=12, decimal_places=3, default=ZERO)
+    custo_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
+
+    class Meta:
+        ordering = ["validade", "id"]
+        constraints = [models.UniqueConstraint(fields=["produto", "numero"], name="numero_lote_por_produto"),
+                       models.CheckConstraint(condition=models.Q(quantidade__gte=0), name="saldo_lote_nao_negativo")]
+
+    def __str__(self):
+        return f"{self.numero} — {self.produto.nome} ({self.quantidade})"
+
+    @property
+    def vencido(self):
+        return self.validade is not None and self.validade < timezone.localdate()
 
 
 class Venda(models.Model):
@@ -212,6 +233,7 @@ class MovimentoEstoque(models.Model):
     observacao = models.CharField(max_length=255, blank=True)
     fornecedor = models.ForeignKey(Fornecedor, null=True, blank=True, on_delete=models.PROTECT, related_name="entradas")
     custo_unitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    lote = models.ForeignKey(LoteProduto, null=True, blank=True, on_delete=models.PROTECT, related_name="movimentos")
     venda = models.ForeignKey(Venda, null=True, blank=True, on_delete=models.SET_NULL, related_name="movimentos")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -276,3 +298,85 @@ class AlteracaoVenda(models.Model):
 
     class Meta:
         ordering = ["-criado_em", "-id"]
+
+
+class ConsumoLote(models.Model):
+    item = models.ForeignKey(ItemVenda, on_delete=models.CASCADE, related_name="consumos_lote")
+    lote = models.ForeignKey(LoteProduto, on_delete=models.PROTECT, related_name="consumos")
+    quantidade = models.DecimalField(max_digits=12, decimal_places=3)
+    custo_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ContaPagar(models.Model):
+    descricao = models.CharField("Descrição", max_length=200)
+    fornecedor = models.ForeignKey(Fornecedor, null=True, blank=True, on_delete=models.PROTECT, related_name="contas")
+    valor = models.DecimalField("Valor total (R$)", max_digits=12, decimal_places=2,
+                                validators=[MinValueValidator(Decimal("0.01"))])
+    vencimento = models.DateField("Vencimento")
+    criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["vencimento", "id"]
+
+    @property
+    def saldo(self):
+        return self.valor - sum((p.valor for p in self.pagamentos.all()), ZERO)
+
+    @property
+    def vencida(self):
+        return self.vencimento < timezone.localdate() and self.saldo > ZERO
+
+    def __str__(self):
+        return self.descricao
+
+
+class PagamentoConta(models.Model):
+    conta = models.ForeignKey(ContaPagar, on_delete=models.PROTECT, related_name="pagamentos")
+    movimento = models.OneToOneField(MovimentoCaixa, on_delete=models.PROTECT, related_name="pagamento_conta")
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+
+
+class PerfilUsuario(models.Model):
+    CARGOS = [("GERENTE", "Gerente"), ("CAIXA", "Caixa"), ("ESTOQUISTA", "Estoquista")]
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil_loja")
+    cargo = models.CharField("Perfil", max_length=12, choices=CARGOS, default="CAIXA")
+
+
+class RegistroAuditoria(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    modelo = models.CharField(max_length=100)
+    objeto_id = models.CharField(max_length=80)
+    acao = models.CharField(max_length=10)
+    antes = models.JSONField(default=dict)
+    depois = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+    @property
+    def mudancas(self):
+        from django.apps import apps
+        try:
+            modelo = apps.get_model(self.modelo)
+        except LookupError:
+            modelo = None
+        resultado = []
+        for nome in sorted(set(self.antes) | set(self.depois)):
+            if nome in ("id", "criado_em") or self.antes.get(nome) == self.depois.get(nome):
+                continue
+            rotulo = nome.replace("_", " ").capitalize()
+            if modelo:
+                try:
+                    rotulo = str(modelo._meta.get_field(nome.removesuffix("_id")).verbose_name).capitalize()
+                except Exception:
+                    pass
+            def exibir(valor):
+                if valor is None:
+                    return "—"
+                if isinstance(valor, bool):
+                    return "Sim" if valor else "Não"
+                return str(valor)
+            resultado.append((rotulo, exibir(self.antes.get(nome)), exibir(self.depois.get(nome))))
+        return resultado

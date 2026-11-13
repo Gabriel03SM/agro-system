@@ -5,7 +5,8 @@ from django.db.models import Q
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
-from .models import Categoria, Cliente, Fornecedor, ItemVenda, MovimentoCaixa, Produto, Venda
+from .models import (Categoria, Cliente, ContaPagar, Fornecedor, ItemVenda, LoteProduto,
+                     MovimentoCaixa, PerfilUsuario, Produto, Venda)
 from .services import fmt_qtd
 
 FMT = "%Y-%m-%dT%H:%M"
@@ -46,7 +47,7 @@ class ProdutoForm(forms.ModelForm):
     class Meta:
         model = Produto
         fields = ["nome", "codigo", "categoria", "unidade", "preco_custo", "preco_venda",
-                  "estoque_atual", "estoque_minimo", "ativo"]
+                  "estoque_atual", "estoque_minimo", "controla_lote", "ativo"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,6 +73,19 @@ class EstoqueForm(forms.Form):
     custo_unitario = forms.DecimalField(label="Custo unitário da entrada (R$)", max_digits=10, decimal_places=2,
                                         min_value=0, required=False,
                                         help_text="Atualiza o custo do produto para o valor desta compra.")
+    numero_lote = forms.CharField(label="Número do lote (entrada)", max_length=80, required=False)
+    validade = forms.DateField(label="Validade (entrada)", required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    lote = forms.ModelChoiceField(label="Lote (perda ou contagem)", queryset=LoteProduto.objects.none(), required=False)
+
+    def __init__(self, *args, produto=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.produto = produto
+        if produto and produto.controla_lote:
+            self.fields["lote"].queryset = produto.lotes.all()
+            self.fields["quantidade"].help_text = "Na contagem, informe o saldo do lote selecionado. O estoque total será recalculado."
+        else:
+            for nome in ("numero_lote", "validade", "lote"):
+                self.fields.pop(nome)
 
     def clean(self):
         dados = super().clean()
@@ -81,6 +95,11 @@ class EstoqueForm(forms.Form):
             for campo in ("fornecedor", "custo_unitario"):
                 if dados.get(campo) is None:
                     self.add_error(campo, "Preencha este campo para a entrada de mercadoria.")
+        if self.produto and self.produto.controla_lote:
+            campos = ("numero_lote", "validade") if dados.get("tipo") == "ENTRADA" else ("lote",)
+            for campo in campos:
+                if not dados.get(campo):
+                    self.add_error(campo, "Informe este campo para o produto com controle de lote.")
         return dados
 
 
@@ -208,3 +227,28 @@ class AbrirCaixaForm(forms.Form):
 class FecharCaixaForm(forms.Form):
     dinheiro_contado = forms.DecimalField(label="Dinheiro contado na gaveta (R$)", max_digits=12, decimal_places=2, min_value=0)
     observacao = forms.CharField(label="Observação da conferência", max_length=255, required=False)
+
+
+class LoteForm(forms.ModelForm):
+    class Meta:
+        model = LoteProduto
+        fields = ["numero", "validade"]
+        widgets = {"validade": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+
+class ContaPagarForm(forms.ModelForm):
+    class Meta:
+        model = ContaPagar
+        fields = ["descricao", "fornecedor", "valor", "vencimento"]
+        widgets = {"vencimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+
+class ImportacaoCSVForm(forms.Form):
+    arquivo = forms.FileField(label="Arquivo CSV (UTF-8)", help_text="Até 1 MB e 1.000 produtos. Use o modelo disponível nesta tela.")
+    atualizar = forms.BooleanField(label="Atualizar produtos que já tenham o mesmo código", required=False)
+
+    def clean_arquivo(self):
+        arquivo = self.cleaned_data["arquivo"]
+        if arquivo.size > 1024 * 1024:
+            raise forms.ValidationError("O arquivo deve ter até 1 MB.")
+        return arquivo

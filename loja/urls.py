@@ -1,8 +1,20 @@
 from django.urls import path
 
-from . import operacao_views as operacao, views
+from . import gestao_views as gestao, operacao_views as operacao, views
 
 urlpatterns = [
+    path("lotes/", gestao.lote_lista, name="lote_lista"),
+    path("lotes/<int:pk>/editar/", gestao.lote_editar, name="lote_editar"),
+    path("contas/", gestao.conta_lista, name="conta_lista"),
+    path("contas/nova/", gestao.conta_form, name="conta_nova"),
+    path("contas/<int:pk>/", gestao.conta_detalhe, name="conta_detalhe"),
+    path("contas/<int:pk>/editar/", gestao.conta_form, name="conta_editar"),
+    path("relatorios/", gestao.relatorio, name="relatorio"),
+    path("produtos/importar/", gestao.importar_produtos, name="importar_produtos"),
+    path("auditoria/", gestao.auditoria_lista, name="auditoria_lista"),
+    path("usuarios/", gestao.usuario_lista, name="usuario_lista"),
+    path("usuarios/novo/", gestao.usuario_form, name="usuario_novo"),
+    path("usuarios/<int:pk>/editar/", gestao.usuario_form, name="usuario_editar"),
     path("clientes/", operacao.cliente_lista, name="cliente_lista"),
     path("clientes/novo/", operacao.cliente_form, name="cliente_novo"),
     path("clientes/<int:pk>/", operacao.cliente_detalhe, name="cliente_detalhe"),
