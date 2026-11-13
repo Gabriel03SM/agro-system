@@ -16,6 +16,8 @@
       <a href="{% url 'venda_lista' %}">Vendas</a>
       <a href="{% url 'caixa' %}">Caixa</a>
       <a href="{% url 'produto_lista' %}">Produtos</a>
+      <a href="{% url 'cliente_lista' %}">Clientes / fiado</a>
+      <a href="{% url 'fornecedor_lista' %}">Fornecedores</a>
       <a href="{% url 'categoria_lista' %}">Categorias</a>
       {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
       <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sair</button></form>

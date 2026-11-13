@@ -1,24 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Venda #{{ venda.pk }}{% endblock %}
 {% block content %}
-<div class="cabeca"><h1>Venda #{{ venda.pk }} {% if venda.cancelada %}<span class="badge cinza">cancelada</span>{% endif %}</h1><a class="btn" href="{% url 'venda_lista' %}">← Vendas</a></div>
+<div class="cabeca"><h1>Venda #{{ venda.pk }} {% if venda.cancelada %}<span class="badge cinza">cancelada</span>{% endif %}</h1><div class="acoes"><a class="btn" href="{% url 'venda_comprovante' venda.pk %}" target="_blank" rel="noopener">Imprimir comprovante</a><a class="btn" href="{% url 'venda_lista' %}">Vendas</a></div></div>
 <div class="card">
   <div class="linha"><span>Data</span><strong>{{ venda.data|date:"d/m/Y H:i" }}</strong></div>
   <div class="linha"><span>Pagamento</span><strong>{{ venda.get_forma_pagamento_display }}</strong></div>
   <div class="linha"><span>Cliente</span><strong>{{ venda.cliente|default:"—" }}</strong></div>
+  {% for pagamento in venda.pagamentos.all %}<div class="linha"><span>{{ pagamento.get_forma_display }}</span><strong>R$ {{ pagamento.valor|floatformat:"2g" }}</strong></div>{% endfor %}
+  {% if venda.cliente_cadastro_id %}<div class="linha"><a href="{% url 'cliente_detalhe' venda.cliente_cadastro_id %}">Ver ficha do cliente / receber fiado</a><strong>Saldo desta venda: R$ {{ venda.saldo_fiado|floatformat:"2g" }}</strong></div>{% endif %}
   {% if venda.observacao %}<div class="linha"><span>Observação</span><strong>{{ venda.observacao }}</strong></div>{% endif %}
   <div class="linha"><span>Registrada por</span><strong>{{ venda.criado_por|default:"—" }}</strong></div>
 </div>
 <div class="card">
   <div class="tabela-wrap"><table>
-    <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Preço</th><th class="num">Subtotal</th></tr></thead>
+    <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Preço</th><th class="num">Desconto</th><th class="num">Subtotal</th></tr></thead>
     <tbody>{% for i in itens %}
-      <tr><td>{{ i.produto.nome }}</td><td class="num">{{ i.quantidade|floatformat:"-3g" }} {{ i.produto.unidade }}</td><td class="num">R$ {{ i.preco_unitario|floatformat:"2g" }}</td><td class="num">R$ {{ i.subtotal|floatformat:"2g" }}</td></tr>
+      <tr><td>{{ i.produto.nome }}</td><td class="num">{{ i.quantidade|floatformat:"-3g" }} {{ i.produto.unidade }}</td><td class="num">R$ {{ i.preco_unitario|floatformat:"2g" }}</td><td class="num">R$ {{ i.desconto|floatformat:"2g" }}</td><td class="num">R$ {{ i.subtotal|floatformat:"2g" }}</td></tr>
     {% endfor %}</tbody>
-    <tfoot><tr><td colspan="3" class="num"><strong>Total</strong></td><td class="num"><strong>R$ {{ venda.total|floatformat:"2g" }}</strong></td></tr></tfoot>
+    <tfoot><tr><td colspan="4" class="num">Desconto da venda</td><td class="num">R$ {{ venda.desconto|floatformat:"2g" }}</td></tr><tr><td colspan="4" class="num"><strong>Total</strong></td><td class="num"><strong>R$ {{ venda.total|floatformat:"2g" }}</strong></td></tr></tfoot>
   </table></div>
 </div>
 {% if user.is_staff and not venda.cancelada %}
+<a class="btn" href="{% url 'venda_editar' venda.pk %}">Corrigir venda</a>
 <form method="post" action="{% url 'venda_cancelar' venda.pk %}" onsubmit="return confirm('Cancelar esta venda? O estoque será devolvido.')">{% csrf_token %}<button class="btn perigo" type="submit">Cancelar venda</button></form>
 {% endif %}
+{% if alteracoes %}<section class="card"><h2>Correções desta venda</h2>{% for a in alteracoes %}<div class="linha"><span>{{ a.criado_em|date:"d/m/Y H:i" }} — {{ a.usuario }}<br>{{ a.motivo }}</span><span>Valor anterior: R$ {{ a.anterior.total }}</span></div>{% endfor %}</section>{% endif %}
 {% endblock %}

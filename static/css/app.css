@@ -60,15 +60,34 @@ tr.inativo{opacity:.6}
 .badge{display:inline-block;background:var(--verm);color:#fff;border-radius:99px;padding:0 8px;font-size:.75rem;font-weight:600}
 .badge.cinza{background:#8a948c}
 .paginacao{display:flex;gap:12px;align-items:center;justify-content:center;margin:14px 0}
-.item{display:grid;grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:start;margin-bottom:6px}
+.item{display:grid;grid-template-columns:3fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:start;margin-bottom:6px}
 .item .campo{margin:0}
 .cabecalho-itens{font-size:.8rem;color:var(--mudo);text-transform:uppercase}
 .item .sub{padding-top:10px;text-align:right;font-weight:600;white-space:nowrap}
 .total-venda{text-align:right;font-size:1.3rem;margin-top:12px}
+.item[hidden],.parcela-pagamento[hidden]{display:none}
+.busca-venda{padding:14px 0 18px;border-bottom:2px solid var(--verde);margin-bottom:18px}
+.busca-venda>label{display:block;font-weight:650;margin-bottom:6px}
+.busca-venda .filtros{margin-bottom:4px}
+.so-mobile{display:none!important}
+.dados-venda{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.comprovante{max-width:80mm;padding:18px;margin:20px auto;background:white;font-size:13px;overflow-wrap:anywhere}
+.comprovante h1{font-size:21px}.comprovante h2{font-size:16px}.comprovante hr{border:0;border-top:1px dashed #777}
+.comprovante .linha{border:0;padding:3px 0}.item-comprovante{margin:12px 0}
+@media print{
+  @page{margin:10mm}
+  body{background:white;color:black}
+  .topo,.nao-imprimir,.aviso{display:none!important}
+  main.wrap{margin:0;padding:0;max-width:none}
+  .comprovante{margin:0 auto;padding:0;color:black}
+  .comprovante .item-comprovante{break-inside:avoid}
+}
 @media(max-width:720px){
   .item{grid-template-columns:1fr 1fr;padding:10px;border:1px solid var(--borda);border-radius:10px;margin-bottom:10px}
   .item .prod{grid-column:1/-1}
   .cabecalho-itens{display:none}
   .item .sub{text-align:left}
   .topo nav{margin-left:0}
+  .so-mobile{display:block!important}
+  .duas{grid-template-columns:minmax(0,1fr)}
 }

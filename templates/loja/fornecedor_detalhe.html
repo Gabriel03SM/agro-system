@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ fornecedor.nome }}{% endblock %}
+{% block content %}
+<div class="cabeca"><h1>{{ fornecedor.nome }}</h1><div><a class="btn" href="{% url 'fornecedor_editar' fornecedor.pk %}">Editar cadastro</a> <a class="btn" href="{% url 'produto_lista' %}">Registrar entrada de produto</a></div></div>
+<section class="card"><p>{{ fornecedor.documento }}<br>{{ fornecedor.telefone }}<br>{{ fornecedor.email }}<br>{{ fornecedor.endereco }}</p></section>
+<section class="card"><h2>Mercadorias recebidas deste fornecedor</h2><div class="tabela-wrap"><table><thead><tr><th>Data</th><th>Produto</th><th class="num">Quantidade</th><th class="num">Custo unitário</th><th>Usuário / observação</th></tr></thead><tbody>{% for e in page %}<tr><td>{{ e.criado_em|date:"d/m/Y H:i" }}</td><td>{{ e.produto }}</td><td class="num">{{ e.quantidade|floatformat:"-3g" }} {{ e.produto.unidade }}</td><td class="num">R$ {{ e.custo_unitario|floatformat:"2g" }}</td><td>{{ e.usuario }}<small>{{ e.observacao }}</small></td></tr>{% empty %}<tr><td colspan="5">Nenhuma entrada vinculada. Escolha o fornecedor ao ajustar o estoque de um produto.</td></tr>{% endfor %}</tbody></table></div></section>{% include "loja/_paginacao.html" %}
+{% endblock %}

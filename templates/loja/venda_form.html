@@ -1,25 +1,43 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Nova venda{% endblock %}
+{% block title %}{% if venda %}Corrigir venda #{{ venda.pk }}{% else %}Nova venda{% endif %}{% endblock %}
 {% block content %}
-<h1>Nova venda</h1>
+<h1>{% if venda %}Corrigir venda #{{ venda.pk }}{% else %}Nova venda{% endif %}</h1>
+{% if not caixa_aberto %}<div class="erro">O caixa está fechado. <a href="{% url 'caixa_abrir' %}">Abra o caixa</a> para registrar vendas.</div>{% endif %}
 <form method="post" novalidate id="form-venda">{% csrf_token %}
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
   <div class="card">
     <h2>Dados da venda</h2>
-    {% include "loja/_campos.html" %}
+    {% if form.non_field_errors %}<div class="erro">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="grade dados-venda">
+    {% for field in form.visible_fields %}
+      <div class="campo {% if 'pagamento_' in field.name %}parcela-pagamento{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+        {% for e in field.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+    </div>
+    <p class="mudo">Fiado exige um <a href="{% url 'cliente_novo' %}" target="_blank" rel="noopener">cliente cadastrado</a>. Os descontos são valores em reais.</p>
+    <p id="conferencia-pagamento" role="status" aria-live="polite"></p>
   </div>
   <div class="card">
     <h2>Itens</h2>
+    <div class="busca-venda">
+      <label for="busca-produto">Digite o produto ou leia o código de barras</label>
+      <div class="filtros"><input id="busca-produto" type="search" list="catalogo-produtos" autocomplete="off" placeholder="Nome ou código; Enter para adicionar"><button class="btn" id="adicionar-busca" type="button">Adicionar produto</button></div>
+      <datalist id="catalogo-produtos"></datalist>
+      <small id="resultado-busca" role="status" aria-live="polite">Leitores USB e Bluetooth que digitam o código seguido de Enter são compatíveis.</small>
+    </div>
     {{ formset.management_form }}
     {% if formset.non_form_errors %}<div class="erro">{{ formset.non_form_errors }}</div>{% endif %}
-    <div class="item cabecalho-itens"><span>Produto</span><span>Qtd</span><span>Preço unit.</span><span>Subtotal</span><span></span></div>
+    <div class="item cabecalho-itens"><span>Produto</span><span>Qtd</span><span>Preço unit.</span><span>Desconto (R$)</span><span>Subtotal</span><span></span></div>
     <div id="itens">
       {% for f in formset %}{% include "loja/_item_row.html" with form=f %}{% endfor %}
     </div>
     <button type="button" class="btn" id="add-item">+ Adicionar item</button>
     <div class="total-venda">Total: <strong id="total">R$ 0,00</strong></div>
   </div>
-  <div class="acoes"><button class="btn primario grande" type="submit">Registrar venda</button><a class="btn" href="{% url 'venda_lista' %}">Cancelar</a></div>
+  <div class="acoes"><button class="btn primario grande" type="submit">{% if venda %}Salvar correção{% else %}Registrar venda{% endif %}</button><a class="btn" href="{% url 'venda_lista' %}">Cancelar</a></div>
 </form>
 <template id="modelo-item">{% include "loja/_item_row.html" with form=formset.empty_form %}</template>
 {% endblock %}

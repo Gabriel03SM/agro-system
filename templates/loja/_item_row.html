@@ -1,8 +1,11 @@
 <div class="item" data-item>
-  <div class="campo prod">{{ form.produto }}{% for e in form.produto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="campo qtd">{{ form.quantidade }}{% for e in form.quantidade.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="campo preco">{{ form.preco_unitario }}{% for e in form.preco_unitario.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo prod"><label class="so-mobile" for="{{ form.produto.id_for_label }}">Produto</label>{{ form.produto }}{% for e in form.produto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo qtd"><label class="so-mobile" for="{{ form.quantidade.id_for_label }}">Quantidade</label>{{ form.quantidade }}{% for e in form.quantidade.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo preco"><label class="so-mobile" for="{{ form.preco_unitario.id_for_label }}">Preço unitário</label>{{ form.preco_unitario }}{% for e in form.preco_unitario.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
+  <div class="campo desconto"><label class="so-mobile" for="{{ form.desconto.id_for_label }}">Desconto (R$)</label>{{ form.desconto }}{% for e in form.desconto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
   <div class="sub"><span data-subtotal>R$ 0,00</span></div>
   <button type="button" class="link neg" data-remover title="Remover item">✕</button>
   {% for h in form.hidden_fields %}{{ h }}{% endfor %}
+  <span hidden>{{ form.DELETE }}</span>
+  {% if form.non_field_errors %}<div class="erro">{{ form.non_field_errors }}</div>{% endif %}
 </div>

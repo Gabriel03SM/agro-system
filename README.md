@@ -76,9 +76,11 @@ build.sh  render.yaml  requirements.txt  .env.example
 ## Fluxo de dados
 - **Venda** → baixa estoque (bloqueia se faltar) e entra no caixa (exceto **fiado**, que aparece como "a receber").
 - **Cancelar venda** (gerente) → devolve o estoque e sai dos totais.
-- **Recebimento de fiado** → registre como *Entrada avulsa* (motivo "Recebimento de fiado").
+- **Recebimento de fiado** → abra a ficha do cliente e registre o valor recebido, total ou parcial. O sistema baixa as dívidas mais antigas e lança uma única entrada no caixa.
 - **Saída de caixa** → fornecedor, despesa, salário, retirada etc.
 - **Estoque** → entrada de mercadoria, perda e contagem em "Ajustar estoque"; tudo fica no histórico.
 
-## Ideias para evoluir
-Controle de fiado por cliente, cadastro de clientes/fornecedores, contas a pagar, relatórios em PDF/Excel, importação de produtos por planilha, lote/validade.
+## Evolução e operação
+Consulte [o acompanhamento das três fases](docs/IMPLEMENTACAO.md). Abra o caixa com o troco inicial antes de vender. Ao registrar entrada de mercadoria, selecione o fornecedor e o custo unitário. A conferência de fechamento considera somente dinheiro físico; Pix e cartões continuam no saldo financeiro do período.
+
+Testes isolados: `python manage.py test --settings=config.test_settings`.

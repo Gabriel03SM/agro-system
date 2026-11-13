@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Comprovante #{{ venda.pk }}{% endblock %}
+{% block content %}
+<div class="acoes nao-imprimir"><button class="btn primario" onclick="window.print()">Imprimir comprovante</button><a class="btn" href="{% url 'venda_detalhe' venda.pk %}">Voltar à venda</a></div>
+<article class="comprovante"><h1>{{ NOME_LOJA }}</h1><h2>Comprovante de venda</h2><p><strong>Não é documento fiscal</strong></p><p>Venda #{{ venda.pk }}<br>{{ venda.data|date:"d/m/Y H:i" }}<br>Cliente: {{ venda.cliente|default:"Consumidor" }}<br>Atendente: {{ venda.criado_por|default:"—" }}</p>{% if venda.cancelada %}<h2>VENDA CANCELADA</h2>{% endif %}<hr>
+{% for i in itens %}<div class="item-comprovante"><strong>{{ i.produto.nome }}</strong><div class="linha"><span>{{ i.quantidade|floatformat:"-3" }} {{ i.produto.unidade }} × R$ {{ i.preco_unitario|floatformat:2 }}</span><span>R$ {{ i.subtotal|floatformat:2 }}</span></div>{% if i.desconto %}<small>Desconto do item: R$ {{ i.desconto|floatformat:2 }}</small>{% endif %}</div>{% endfor %}<hr>
+{% if venda.desconto %}<div class="linha"><span>Desconto na venda</span><span>R$ {{ venda.desconto|floatformat:2 }}</span></div>{% endif %}<div class="linha"><strong>Total</strong><strong>R$ {{ venda.total|floatformat:2 }}</strong></div>{% for p in venda.pagamentos.all %}<div class="linha"><span>{{ p.get_forma_display }}</span><span>R$ {{ p.valor|floatformat:2 }}</span></div>{% endfor %}{% if venda.observacao %}<p>{{ venda.observacao }}</p>{% endif %}<p>Obrigado pela preferência.</p></article>
+{% endblock %}
