@@ -20,9 +20,11 @@ O CSV cria o catálogo com estoque zero. Atualizações por código só ocorrem 
 
 ## Fase 3 — produção
 
-Em implementação: backup automático, monitoramento, proteção de login/senhas, PWA/layout móvel, GitHub Actions e testes das telas novas.
+Implementados no código: backup diário cifrado com teste de restauração, monitoramento agendado, proteção de login/senhas, PWA/layout móvel, GitHub Actions e testes das telas novas. A configuração do Render aguarda os checks antes de publicar.
 
 Ainda não há domínio próprio comprado. As configurações dependentes de serviços externos e secrets serão documentadas; não são consideradas ativas sem verificação no serviço.
+
+Consulte [o guia de produção](PRODUCAO.md) para ativar as configurações externas. As integrações do Render e Supabase ainda não estão conectadas nesta sessão; a credencial de backup e a chave pública ainda precisam ser configuradas. Não foi contratado plano pago, comprado domínio ou feito deploy desta branch.
 
 ## Validação
 

@@ -12,6 +12,9 @@ a{color:var(--verde)}
 .topo nav a,.topo nav .link{color:#fff;text-decoration:none;padding:6px 10px;border-radius:8px;font-size:.95rem}
 .topo nav a:hover,.topo nav .link:hover{background:var(--verde-esc)}
 .topo nav a.destaque{background:#fff;color:var(--verde);font-weight:600}
+.topo .menu-toggle{display:none;margin-left:auto}
+[hidden]{display:none!important}
+button:focus-visible,a:focus-visible{outline:3px solid #94c9a1;outline-offset:3px}
 form.inline{display:inline;margin:0}
 button.link{background:none;border:0;cursor:pointer;font:inherit;padding:0;color:var(--verde)}
 .card{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -90,4 +93,15 @@ tr.inativo{opacity:.6}
   .topo nav{margin-left:0}
   .so-mobile{display:block!important}
   .duas{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:980px){
+  .topo .menu-toggle{display:block}
+  .topo nav{display:none;width:100%;margin-left:0;gap:4px;padding-top:8px}
+  .topo nav.aberto{display:flex}
+  .topo nav a,.topo nav form,.topo nav>button{flex:1 1 44%;padding:10px;text-align:left}
+  .topo nav form button{padding:0!important}
+  .cabeca .acoes{margin-top:0}
+  .dados-venda{grid-template-columns:minmax(0,1fr)}
+  .tabela-wrap{max-width:100%}
+  .card{padding:14px}
 }

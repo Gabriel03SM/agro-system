@@ -6,12 +6,14 @@ services:
     buildCommand: "./build.sh"
     startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
     healthCheckPath: /healthz
-    autoDeploy: true
+    autoDeployTrigger: checksPass
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
       - key: DEBUG
         value: "False"
+      - key: PUBLIC_BASE_URL
+        value: https://agro-gestao.onrender.com
       - key: SECRET_KEY
         generateValue: true
       - key: NOME_LOJA

@@ -108,7 +108,8 @@ class Produto(models.Model):
                                       validators=[MinValueValidator(ZERO)])
     preco_venda = models.DecimalField("Preço de venda (R$)", max_digits=10, decimal_places=2,
                                       validators=[MinValueValidator(ZERO)])
-    estoque_atual = models.DecimalField("Estoque atual", max_digits=12, decimal_places=3, default=ZERO)
+    estoque_atual = models.DecimalField("Estoque atual", max_digits=12, decimal_places=3, default=ZERO,
+                                         validators=[MinValueValidator(ZERO)])
     estoque_minimo = models.DecimalField("Estoque mínimo (alerta)", max_digits=12, decimal_places=3, default=ZERO,
                                          validators=[MinValueValidator(ZERO)])
     ativo = models.BooleanField("Ativo", default=True)
@@ -354,6 +355,14 @@ class RegistroAuditoria(models.Model):
 
     class Meta:
         ordering = ["-criado_em", "-id"]
+
+    @property
+    def tipo_registro(self):
+        from django.apps import apps
+        try:
+            return str(apps.get_model(self.modelo)._meta.verbose_name).capitalize()
+        except LookupError:
+            return self.modelo.split(".")[-1]
 
     @property
     def mudancas(self):

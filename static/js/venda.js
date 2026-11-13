@@ -13,6 +13,7 @@
 
   function num(v) { var n = Number(String(v || "0").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
   function centavos(n) { return Math.round((n + Number.EPSILON) * 100); }
+  function normalizar(s) { return String(s).toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
   function linhas() { return Array.from(lista.querySelectorAll("[data-item]")).filter(function (r) { return !r.hidden; }); }
 
   modelo.content.querySelectorAll("select[name$='-produto'] option").forEach(function (option) {
@@ -63,13 +64,13 @@
   }
 
   function adicionarBusca() {
-    var texto = busca.value.trim().toLocaleLowerCase("pt-BR");
+    var texto = normalizar(busca.value.trim());
     if (!texto) { busca.focus(); return; }
     var exatos = Array.from(catalogo.values()).filter(function (p) {
-      return (p.codigo && p.codigo.toLocaleLowerCase("pt-BR") === texto) || p.rotulo.toLocaleLowerCase("pt-BR") === texto;
+      return (p.codigo && normalizar(p.codigo) === texto) || normalizar(p.rotulo) === texto;
     });
     var encontrados = exatos.length ? exatos : Array.from(catalogo.values()).filter(function (p) {
-      return p.nome.toLocaleLowerCase("pt-BR").includes(texto);
+      return normalizar(p.nome).includes(texto);
     });
     if (encontrados.length !== 1) {
       resultado.textContent = encontrados.length ? "Escolha um produto nas sugestões para distinguir os resultados." : "Produto não encontrado. Confira o nome ou o código cadastrado.";
@@ -122,4 +123,5 @@
   window.addEventListener("pageshow", function () { form.querySelector("button[type='submit']").disabled = false; });
   lista.querySelectorAll("[data-item]").forEach(function (r) { r.hidden = r.querySelector("[name$='-DELETE']").checked; });
   recalcular();
+  if (window.matchMedia("(min-width: 981px)").matches) busca.focus();
 })();

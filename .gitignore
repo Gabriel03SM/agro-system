@@ -13,6 +13,8 @@ output/
 backups/
 *.dump
 *.age
+*.agekey
+backup-chave*.txt
 .coverage
 htmlcov/
 playwright-report/
