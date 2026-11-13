@@ -1,30 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Produtos{% endblock %}
 {% block content %}
-<div class="cabeca"><h1>Produtos</h1>{% if pode_estoque %}<div><a class="btn" href="{% url 'importar_produtos' %}">Importar CSV</a> <a class="btn primario" href="{% url 'produto_novo' %}">+ Novo produto</a></div>{% endif %}</div>
-<form method="get" class="filtros">
-  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome ou código">
-  <select name="status">
-    <option value="ativos" {% if status == "ativos" %}selected{% endif %}>Ativos</option>
-    <option value="inativos" {% if status == "inativos" %}selected{% endif %}>Inativos</option>
-    <option value="todos" {% if status == "todos" %}selected{% endif %}>Todos</option>
-  </select>
-  <label class="chk"><input type="checkbox" name="baixo" value="1" {% if baixo %}checked{% endif %}> Só estoque baixo</label>
-  <button class="btn" type="submit">Filtrar</button>
+<header class="cabeca"><div><h1>Produtos</h1><p class="mudo">Catálogo, preços e posição de estoque.</p></div>{% if pode_estoque %}<div class="acoes"><a class="btn" href="{% url 'importar_produtos' %}">{% include "loja/_icone.html" with nome="entrada" %}Importar CSV</a><a class="btn primario" href="{% url 'produto_novo' %}">{% include "loja/_icone.html" with nome="mais" %}Novo produto</a></div>{% endif %}</header>
+<form method="get" class="filtros filtros-catalogo" role="search" aria-label="Filtrar produtos">
+  <div class="campo-busca">{% include "loja/_icone.html" with nome="busca" %}<input type="search" name="q" value="{{ q }}" placeholder="Nome ou código do produto" aria-label="Buscar por nome ou código"></div>
+  <select name="status" aria-label="Status do produto"><option value="ativos"{% if status == "ativos" %} selected{% endif %}>Ativos</option><option value="inativos"{% if status == "inativos" %} selected{% endif %}>Inativos</option><option value="todos"{% if status == "todos" %} selected{% endif %}>Todos os produtos</option></select>
+  <label class="chk"><input type="checkbox" name="baixo" value="1"{% if baixo %} checked{% endif %}>Só estoque baixo</label>
+  <button class="btn" type="submit">{% include "loja/_icone.html" with nome="filtro" %}Filtrar</button>
 </form>
-<div class="tabela-wrap"><table>
-  <thead><tr><th>Produto</th><th>Categoria</th><th class="num">Preço</th><th class="num">Estoque</th><th></th></tr></thead>
-  <tbody>
-  {% for p in page %}
-    <tr class="{% if not p.ativo %}inativo{% endif %}">
-      <td><strong>{{ p.nome }}</strong>{% if p.codigo %}<br><small class="mudo">{{ p.codigo }}</small>{% endif %}{% if not p.ativo %} <span class="badge cinza">inativo</span>{% endif %}</td>
-      <td>{{ p.categoria|default:"—" }}</td>
-      <td class="num">R$ {{ p.preco_venda|floatformat:"2g" }}</td>
-      <td class="num {% if p.estoque_baixo %}neg{% endif %}">{{ p.estoque_atual|floatformat:"-3g" }} {{ p.unidade }}</td>
-      <td class="acoes-linha">{% if pode_estoque %}<a href="{% url 'produto_estoque' p.pk %}">Ajustar estoque</a> · <a href="{% url 'produto_editar' p.pk %}">Editar</a>{% endif %}</td>
+<div class="tabela-wrap"><table class="tabela-lista tabela-produtos"><caption class="sr-only">Produtos cadastrados</caption>
+  <thead><tr><th scope="col">Produto</th><th scope="col">Categoria</th><th scope="col" class="num">Preço de venda</th><th scope="col" class="num">Estoque</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
+  <tbody>{% for p in page %}
+    <tr{% if not p.ativo %} class="inativo"{% endif %}>
+      <td class="celula-principal"><strong>{{ p.nome }}</strong>{% if p.codigo %}<small>{{ p.codigo }}</small>{% endif %}{% if not p.ativo %}<span class="badge cinza">Inativo</span>{% endif %}</td>
+      <td data-rotulo="Categoria">{{ p.categoria|default:"Sem categoria" }}</td>
+      <td class="num" data-rotulo="Preço de venda">R$ {{ p.preco_venda|floatformat:"2g" }}</td>
+      <td class="num" data-rotulo="Estoque"><span class="{% if p.estoque_baixo %}neg{% endif %}">{{ p.estoque_atual|floatformat:"-3g" }} {{ p.unidade }}</span>{% if p.estoque_baixo %}<small><span class="badge">Estoque baixo</span></small>{% endif %}</td>
+      <td class="acoes-linha">{% if pode_estoque %}<a class="acao-tabela" href="{% url 'produto_estoque' p.pk %}">{% include "loja/_icone.html" with nome="produtos" %}Estoque</a><a class="acao-tabela" href="{% url 'produto_editar' p.pk %}">{% include "loja/_icone.html" with nome="editar" %}Editar</a>{% endif %}</td>
     </tr>
-  {% empty %}<tr><td colspan="5" class="mudo">Nenhum produto encontrado.</td></tr>{% endfor %}
-  </tbody>
+  {% empty %}<tr><td colspan="5"><div class="estado-vazio">{% include "loja/_icone.html" with nome="produtos" %}<h2>Nenhum produto encontrado</h2>{% if q or baixo or status != 'ativos' %}<p>Ajuste os filtros para encontrar outros produtos.</p><a class="btn" href="{% url 'produto_lista' %}">Limpar filtros</a>{% else %}<p>Cadastre o primeiro produto para começar a organizar o estoque.</p>{% if pode_estoque %}<a class="btn" href="{% url 'produto_novo' %}">Cadastrar produto</a>{% endif %}{% endif %}</div></td></tr>{% endfor %}</tbody>
 </table></div>
 {% include "loja/_paginacao.html" %}
 {% endblock %}

@@ -1,28 +1,27 @@
 {% extends "base.html" %}
+{% block title %}Início{% endblock %}
 {% block content %}
-<h1>Início</h1>
-{% if qtd_lotes_alerta %}<div class="aviso error">{{ qtd_lotes_alerta }} lote(s) vencido(s), a vencer em até 30 dias ou sem validade informada. {% if pode_estoque %}<a href="{% url 'lote_lista' %}">Conferir lotes</a>{% endif %}</div>{% endif %}
-{% if qtd_contas_vencidas %}<div class="aviso error">{{ qtd_contas_vencidas }} conta(s) vencida(s). <a href="{% url 'conta_lista' %}?filtro=vencidas">Ver contas a pagar</a></div>{% endif %}
-<div class="grade">
-  <div class="card kpi"><span>Vendas hoje</span><strong>R$ {{ hoje.total_vendas|floatformat:"2g" }}</strong><small>{{ hoje.qtd_vendas }} venda(s)</small></div>
-  <div class="card kpi"><span>Saídas de caixa hoje</span><strong class="neg">R$ {{ hoje.saidas|floatformat:"2g" }}</strong></div>
-  <div class="card kpi"><span>Saldo do caixa hoje</span><strong class="{% if hoje.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ hoje.saldo|floatformat:"2g" }}</strong></div>
-  <div class="card kpi"><span>Vendas no mês</span><strong>R$ {{ mes.total_vendas|floatformat:"2g" }}</strong><small>Saldo do mês: R$ {{ mes.saldo|floatformat:"2g" }}</small></div>
-</div>
-
-<div class="duas">
-  <section class="card">
-    <h2>⚠️ Estoque baixo {% if qtd_estoque_baixo %}<span class="badge">{{ qtd_estoque_baixo }}</span>{% endif %}</h2>
-    {% for p in estoque_baixo %}
-      <div class="linha"><span>{{ p.nome }}</span><span class="neg">{{ p.estoque_atual|floatformat:"-3g" }} {{ p.unidade }}</span></div>
-    {% empty %}<p class="mudo">Nenhum produto com estoque baixo.</p>{% endfor %}
-    {% if qtd_estoque_baixo > 10 %}<p><a href="{% url 'produto_lista' %}?baixo=1">Ver todos →</a></p>{% endif %}
+<header class="cabeca"><div><h1>Início</h1><p class="mudo">{% now "d \d\e F \d\e Y" %}</p></div>{% if pode_financeiro %}<a class="btn primario" href="{% url 'venda_nova' %}">{% include "loja/_icone.html" with nome="mais" %}Nova venda</a>{% endif %}</header>
+{% if qtd_lotes_alerta %}<div class="aviso warning" role="status">{% include "loja/_icone.html" with nome="lotes" %}<span>{{ qtd_lotes_alerta }} lote(s) precisam de atenção à validade.{% if pode_estoque %} <a href="{% url 'lote_lista' %}">Conferir lotes</a>{% endif %}</span></div>{% endif %}
+{% if qtd_contas_vencidas %}<div class="aviso warning" role="status">{% include "loja/_icone.html" with nome="alerta" %}<span>{{ qtd_contas_vencidas }} conta(s) vencida(s). <a href="{% url 'conta_lista' %}?filtro=vencidas">Ver contas a pagar</a></span></div>{% endif %}
+<section class="resumo-dia" aria-label="Movimento de hoje">
+  <div class="vendas-hoje"><h2>Vendas de hoje</h2><strong class="valor-destaque">R$ {{ hoje.total_vendas|floatformat:"2g" }}</strong><span>{{ hoje.qtd_vendas }} venda{{ hoje.qtd_vendas|pluralize }} registrada{{ hoje.qtd_vendas|pluralize }}</span></div>
+  <div class="movimento-hoje">
+    <div><span>Saldo de hoje</span><strong class="valor-medio {% if hoje.saldo < 0 %}neg{% endif %}">R$ {{ hoje.saldo|floatformat:"2g" }}</strong><small>Recebimentos menos saídas</small></div>
+    <div><span>Saídas de hoje</span><strong class="valor-medio neg">R$ {{ hoje.saidas|floatformat:"2g" }}</strong><small>Movimentações do caixa</small></div>
+  </div>
+</section>
+<div class="dashboard-layout">
+  <section class="card painel-estoque">
+    <div class="cabeca-secao"><h2>Estoque baixo{% if qtd_estoque_baixo %} <span class="badge">{{ qtd_estoque_baixo }}</span>{% endif %}</h2><a class="link-acao" href="{% url 'produto_lista' %}?baixo=1">Ver estoque{% include "loja/_icone.html" with nome="seta" %}</a></div>
+    <div class="lista-estoque">{% for p in estoque_baixo %}
+      <a class="linha estoque-item" href="{% if pode_estoque %}{% url 'produto_estoque' p.pk %}{% else %}{% url 'produto_lista' %}?q={{ p.nome|urlencode }}{% endif %}"><span>{{ p.nome }}<small>Mínimo: {{ p.estoque_minimo|floatformat:"-3g" }} {{ p.unidade }}</small></span><strong class="neg">{{ p.estoque_atual|floatformat:"-3g" }} <small>{{ p.unidade }}</small></strong>{% include "loja/_icone.html" with nome="seta" %}</a>
+    {% empty %}<div class="estado-vazio">{% include "loja/_icone.html" with nome="check" %}<h3>Estoque em dia</h3><p>Os produtos ativos estão acima do estoque mínimo.</p><a class="link-acao" href="{% url 'produto_lista' %}">Consultar produtos{% include "loja/_icone.html" with nome="seta" %}</a></div>{% endfor %}</div>
   </section>
-  <section class="card">
-    <h2>Últimas vendas</h2>
-    {% for v in ultimas_vendas %}
-      <div class="linha"><a href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }} · {{ v.data|date:"d/m H:i" }}{% if v.cancelada %} <span class="badge cinza">cancelada</span>{% endif %}</a><span>R$ {{ v.total|floatformat:"2g" }}</span></div>
-    {% empty %}<p class="mudo">Nenhuma venda ainda.</p>{% endfor %}
+  <section class="card painel-vendas">
+    <div class="cabeca-secao"><h2>Últimas vendas</h2><a class="link-acao" href="{% url 'venda_lista' %}">Ver todas{% include "loja/_icone.html" with nome="seta" %}</a></div>
+    <div class="tabela-wrap"><table class="tabela-lista tabela-recentes"><caption class="sr-only">Últimas vendas registradas</caption><thead><tr><th scope="col">Venda</th><th scope="col">Quando</th><th scope="col">Cliente</th><th scope="col" class="num">Total</th></tr></thead><tbody>{% for v in ultimas_vendas %}<tr{% if v.cancelada %} class="inativo"{% endif %}><td class="celula-principal"><a href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }}</a>{% if v.cancelada %} <span class="badge cinza">Cancelada</span>{% endif %}</td><td data-rotulo="Quando">{{ v.data|date:"d/m · H:i" }}</td><td data-rotulo="Cliente">{{ v.cliente|default:"Consumidor" }}</td><td data-rotulo="Total" class="num valor">R$ {{ v.total|floatformat:"2g" }}</td></tr>{% empty %}<tr><td colspan="4"><div class="estado-vazio"><h3>A primeira venda começa aqui</h3><p>As vendas registradas aparecerão nesta lista.</p><a class="btn" href="{% url 'venda_nova' %}">Registrar uma venda</a></div></td></tr>{% endfor %}</tbody></table></div>
   </section>
 </div>
+<section class="resumo-mes" aria-label="Resumo do mês"><div><span>Vendas no mês</span><strong>R$ {{ mes.total_vendas|floatformat:"2g" }}</strong></div><div><span>Saldo do mês</span><strong>R$ {{ mes.saldo|floatformat:"2g" }}</strong></div><a class="link-acao" href="{% url 'caixa' %}">Consultar caixa{% include "loja/_icone.html" with nome="seta" %}</a></section>
 {% endblock %}

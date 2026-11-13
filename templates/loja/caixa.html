@@ -1,35 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Caixa{% endblock %}
 {% block content %}
-<div class="cabeca"><h1>Caixa</h1>
-  <div><a class="btn perigo" href="{% url 'movimento_novo' %}?tipo=SAIDA">− Saída de caixa</a> <a class="btn" href="{% url 'movimento_novo' %}?tipo=ENTRADA">+ Entrada avulsa</a></div></div>
-<section class="card">
-{% if caixa_aberto %}<div class="cabeca"><div><strong>Caixa #{{ caixa_aberto.pk }} aberto</strong><small>{{ caixa_aberto.aberto_em|date:"d/m/Y H:i" }} por {{ caixa_aberto.aberto_por }} · Troco inicial: R$ {{ caixa_aberto.troco_inicial|floatformat:"2g" }}</small></div><a class="btn" href="{% url 'caixa_fechar' caixa_aberto.pk %}">Conferir e fechar caixa</a></div>
-{% else %}<div class="cabeca"><span>Caixa fechado. Abra-o antes de registrar vendas e recebimentos.</span><a class="btn primario" href="{% url 'caixa_abrir' %}">Abrir caixa</a></div>{% endif %}
+<header class="cabeca"><div><h1>Caixa</h1><p class="mudo">Entradas, saídas e conferência do dinheiro.</p></div><div class="acoes"><a class="btn secundario" href="{% url 'movimento_novo' %}?tipo=SAIDA">{% include "loja/_icone.html" with nome="saida" %}Saída de caixa</a><a class="btn" href="{% url 'movimento_novo' %}?tipo=ENTRADA">{% include "loja/_icone.html" with nome="entrada" %}Entrada avulsa</a></div></header>
+<section class="sessao-caixa" aria-label="Situação do caixa">
+{% if caixa_aberto %}<div><span class="status-caixa">Caixa #{{ caixa_aberto.pk }} aberto</span><small>{{ caixa_aberto.aberto_em|date:"d/m/Y H:i" }} por {{ caixa_aberto.aberto_por }} · Troco inicial: R$ {{ caixa_aberto.troco_inicial|floatformat:"2g" }}</small></div><a class="btn" href="{% url 'caixa_fechar' caixa_aberto.pk %}">Conferir e fechar caixa{% include "loja/_icone.html" with nome="seta" %}</a>
+{% else %}<div><strong>O caixa está fechado</strong><small>Abra o caixa para registrar vendas e recebimentos.</small></div><a class="btn primario" href="{% url 'caixa_abrir' %}">{% include "loja/_icone.html" with nome="mais" %}Abrir caixa</a>{% endif %}
 </section>
-<form method="get" class="filtros">
-  <label>De <input type="date" name="de" value="{{ de|date:'Y-m-d' }}"></label>
-  <label>Até <input type="date" name="ate" value="{{ ate|date:'Y-m-d' }}"></label>
-  <button class="btn" type="submit">Ver período</button>
+<form method="get" class="filtros filtros-periodo" aria-label="Período do caixa">
+  <label class="filtro-data">De<input type="date" name="de" value="{{ de|date:'Y-m-d' }}"></label>
+  <label class="filtro-data">Até<input type="date" name="ate" value="{{ ate|date:'Y-m-d' }}"></label>
+  <button class="btn" type="submit">{% include "loja/_icone.html" with nome="filtro" %}Ver período</button>
 </form>
-<div class="grade">
-  <div class="card kpi"><span>Vendas recebidas</span><strong>R$ {{ r.recebido|floatformat:"2g" }}</strong><small>{{ r.qtd_vendas }} venda(s), sem fiado</small></div>
-  <div class="card kpi"><span>Outras entradas</span><strong class="pos">R$ {{ r.entradas|floatformat:"2g" }}</strong></div>
-  <div class="card kpi"><span>Saídas</span><strong class="neg">R$ {{ r.saidas|floatformat:"2g" }}</strong></div>
-  <div class="card kpi"><span>Saldo do período (todas as formas)</span><strong class="{% if r.saldo < 0 %}neg{% else %}pos{% endif %}">R$ {{ r.saldo|floatformat:"2g" }}</strong>{% if r.fiado %}<small>Vendido a prazo no período: R$ {{ r.fiado|floatformat:"2g" }}</small>{% endif %}<a href="{% url 'cliente_lista' %}?devedores=1">Consultar fiados pendentes</a></div>
-</div>
-<div class="duas">
-  <section class="card"><h2>Vendas por forma de pagamento</h2>
-    {% for nome, valor in r.por_forma %}<div class="linha"><span>{{ nome }}</span><strong>R$ {{ valor|floatformat:"2g" }}</strong></div>
-    {% empty %}<p class="mudo">Sem vendas no período.</p>{% endfor %}
-  </section>
-  <section class="card"><h2>Lançamentos do período</h2>
+<section class="balanco-caixa" aria-label="Resumo do período">
+  <div class="saldo-principal"><h2>Saldo do período</h2><strong class="valor-destaque {% if r.saldo < 0 %}neg{% endif %}">R$ {{ r.saldo|floatformat:"2g" }}</strong><p class="mudo">Todas as formas de recebimento</p>{% if r.fiado %}<p class="nota-fiado">Vendido a prazo: R$ {{ r.fiado|floatformat:"2g" }}</p>{% endif %}<a class="link-acao" href="{% url 'cliente_lista' %}?devedores=1">Consultar fiados pendentes{% include "loja/_icone.html" with nome="seta" %}</a></div>
+  <dl class="resumo-entradas"><div><dt>Vendas recebidas</dt><dd class="pos">R$ {{ r.recebido|floatformat:"2g" }}</dd><small>{{ r.qtd_vendas }} venda(s), sem fiado</small></div><div><dt>Outras entradas</dt><dd class="pos">R$ {{ r.entradas|floatformat:"2g" }}</dd></div><div><dt>Saídas</dt><dd class="neg">R$ {{ r.saidas|floatformat:"2g" }}</dd></div></dl>
+</section>
+<div class="caixa-layout">
+  <section class="card lancamentos">
+    <div class="cabeca-secao"><h2>Lançamentos do período</h2><span class="mudo">Entradas e saídas avulsas</span></div>
     {% for m in movimentos %}
-      <div class="linha"><span>{{ m.data|date:"d/m H:i" }} · {{ m.descricao }}<br><small class="mudo">{{ m.get_motivo_display }} · {{ m.get_forma_display }}{% if m.criado_por %} · {{ m.criado_por }}{% endif %}</small></span>
-      <span class="{% if m.tipo == 'SAIDA' %}neg{% else %}pos{% endif %}">{% if m.tipo == 'SAIDA' %}−{% else %}+{% endif %} R$ {{ m.valor|floatformat:"2g" }}
-      {% if user.is_staff %}<a href="{% url 'movimento_excluir' m.pk %}" class="neg" title="Excluir">✕</a>{% endif %}</span></div>
-    {% empty %}<p class="mudo">Sem lançamentos no período.</p>{% endfor %}
+      <div class="lancamento {% if m.tipo == 'SAIDA' %}lancamento-saida{% else %}lancamento-entrada{% endif %}">
+        <span class="lancamento-icone">{% if m.tipo == 'SAIDA' %}{% include "loja/_icone.html" with nome="saida" %}{% else %}{% include "loja/_icone.html" with nome="entrada" %}{% endif %}</span>
+        <div class="lancamento-descricao"><strong>{{ m.descricao }}</strong><small>{{ m.data|date:"d/m · H:i" }} · {{ m.get_motivo_display }} · {{ m.get_forma_display }}{% if m.criado_por %} · {{ m.criado_por }}{% endif %}</small></div>
+        <strong class="lancamento-valor {% if m.tipo == 'SAIDA' %}neg{% else %}pos{% endif %}">{% if m.tipo == 'SAIDA' %}−{% else %}+{% endif %} R$ {{ m.valor|floatformat:"2g" }}</strong>
+        {% if user.is_staff %}<form method="post" action="{% url 'movimento_excluir' m.pk %}" class="inline" data-confirm="Excluir o lançamento {{ m.descricao }} de R$ {{ m.valor|floatformat:'2' }}?" data-confirm-titulo="Excluir lançamento" data-confirm-botao="Excluir lançamento">{% csrf_token %}<button class="btn-icone" type="submit" aria-label="Excluir lançamento: {{ m.descricao }}">{% include "loja/_icone.html" with nome="excluir" %}</button></form>{% endif %}
+      </div>
+    {% empty %}<div class="estado-vazio">{% include "loja/_icone.html" with nome="caixa" %}<h3>Nenhum lançamento no período</h3><p>Registre uma entrada avulsa ou uma saída quando movimentar o caixa.</p><a class="btn" href="{% url 'movimento_novo' %}?tipo=ENTRADA">Registrar entrada</a></div>{% endfor %}
   </section>
+  <section class="card formas-pagamento"><div class="cabeca-secao"><h2>Recebimento das vendas</h2></div><dl>{% for nome, valor in r.por_forma %}<div class="linha"><dt>{{ nome }}</dt><dd>R$ {{ valor|floatformat:"2g" }}</dd></div>{% empty %}<p class="mudo">As formas de pagamento aparecerão após a primeira venda no período.</p>{% endfor %}</dl></section>
 </div>
-<section class="card"><h2>Últimos fechamentos</h2><div class="tabela-wrap"><table><thead><tr><th>Caixa / fechamento</th><th>Responsável</th><th class="num">Esperado em dinheiro</th><th class="num">Contado</th><th class="num">Diferença</th></tr></thead><tbody>{% for c in fechamentos %}<tr><td>#{{ c.pk }} · {{ c.fechado_em|date:"d/m/Y H:i" }}<small>{{ c.observacao }}</small></td><td>{{ c.fechado_por }}</td><td class="num">R$ {{ c.dinheiro_esperado|floatformat:"2g" }}</td><td class="num">R$ {{ c.dinheiro_contado|floatformat:"2g" }}</td><td class="num {% if c.diferenca %}neg{% endif %}">R$ {{ c.diferenca|floatformat:"2g" }}</td></tr>{% empty %}<tr><td colspan="5">Nenhum caixa fechado ainda.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="card historico-caixa"><div class="cabeca-secao"><h2>Últimos fechamentos</h2></div><div class="tabela-wrap"><table><caption class="sr-only">Conferência dos últimos caixas fechados</caption><thead><tr><th scope="col">Caixa / fechamento</th><th scope="col">Responsável</th><th scope="col" class="num">Esperado em dinheiro</th><th scope="col" class="num">Contado</th><th scope="col" class="num">Diferença</th></tr></thead><tbody>{% for c in fechamentos %}<tr><td><strong>#{{ c.pk }}</strong> · {{ c.fechado_em|date:"d/m/Y H:i" }}<small>{{ c.observacao }}</small></td><td>{{ c.fechado_por }}</td><td class="num">R$ {{ c.dinheiro_esperado|floatformat:"2g" }}</td><td class="num">R$ {{ c.dinheiro_contado|floatformat:"2g" }}</td><td class="num {% if c.diferenca %}neg{% endif %}">R$ {{ c.diferenca|floatformat:"2g" }}</td></tr>{% empty %}<tr><td colspan="5"><p class="vazio-tabela">Nenhum caixa fechado ainda. A primeira conferência aparecerá aqui.</p></td></tr>{% endfor %}</tbody></table></div></section>
 {% endblock %}

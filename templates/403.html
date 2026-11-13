@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Acesso negado{% endblock %}
 {% block content %}
-<div class="card"><h1>Acesso negado</h1><p>Essa ação é permitida apenas para o gerente.</p><p><a class="btn" href="{% url 'dashboard' %}">Voltar ao início</a></p></div>
+<section class="estado-pagina">
+  {% include "loja/_icone.html" with nome="admin" %}
+  <h1>Acesso negado</h1>
+  <p>Seu perfil não tem acesso a esta página ou ação. Fale com o gerente se precisar de uma autorização.</p>
+  <a class="btn primario" href="{% url 'dashboard' %}">{% include "loja/_icone.html" with nome="voltar" %}Voltar ao início</a>
+</section>
 {% endblock %}

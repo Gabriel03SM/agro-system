@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Venda #{{ venda.pk }}{% endblock %}
 {% block content %}
-<div class="cabeca"><h1>Venda #{{ venda.pk }} {% if venda.cancelada %}<span class="badge cinza">cancelada</span>{% endif %}</h1><div class="acoes"><a class="btn" href="{% url 'venda_comprovante' venda.pk %}" target="_blank" rel="noopener">Imprimir comprovante</a><a class="btn" href="{% url 'venda_lista' %}">Vendas</a></div></div>
+<header class="cabeca"><h1>Venda #{{ venda.pk }} {% if venda.cancelada %}<span class="badge cinza">Cancelada</span>{% endif %}</h1><div class="acoes"><a class="btn" href="{% url 'venda_comprovante' venda.pk %}" target="_blank" rel="noopener">{% include "loja/_icone.html" with nome="imprimir" %}Imprimir comprovante</a><a class="link-voltar" href="{% url 'venda_lista' %}">{% include "loja/_icone.html" with nome="voltar" %}Vendas</a></div></header>
 <div class="card">
   <div class="linha"><span>Data</span><strong>{{ venda.data|date:"d/m/Y H:i" }}</strong></div>
   <div class="linha"><span>Pagamento</span><strong>{{ venda.get_forma_pagamento_display }}</strong></div>
@@ -21,8 +21,8 @@
   </table></div>
 </div>
 {% if user.is_staff and not venda.cancelada %}
-<a class="btn" href="{% url 'venda_editar' venda.pk %}">Corrigir venda</a>
-<form method="post" action="{% url 'venda_cancelar' venda.pk %}" onsubmit="return confirm('Cancelar esta venda? O estoque será devolvido.')">{% csrf_token %}<button class="btn perigo" type="submit">Cancelar venda</button></form>
+<a class="btn" href="{% url 'venda_editar' venda.pk %}">{% include "loja/_icone.html" with nome="editar" %}Corrigir venda</a>
+<form method="post" action="{% url 'venda_cancelar' venda.pk %}" data-confirm="Cancelar a venda #{{ venda.pk }}? O estoque será devolvido." data-confirm-titulo="Cancelar venda" data-confirm-botao="Cancelar venda">{% csrf_token %}<button class="btn perigo" type="submit">{% include "loja/_icone.html" with nome="excluir" %}Cancelar venda</button></form>
 {% endif %}
 {% if alteracoes %}<section class="card"><h2>Correções desta venda</h2>{% for a in alteracoes %}<div class="linha"><span>{{ a.criado_em|date:"d/m/Y H:i" }} — {{ a.usuario }}<br>{{ a.motivo }}</span><span>Valor anterior: R$ {{ a.anterior.total }}</span></div>{% endfor %}</section>{% endif %}
 {% endblock %}

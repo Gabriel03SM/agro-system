@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#2f6b3a">
+<meta name="theme-color" content="#214e39">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="{% url 'manifesto' %}">
 <link rel="icon" href="{% static 'icons/agro-192.png' %}" type="image/png">
@@ -11,42 +11,71 @@
 <title>{% block title %}Início{% endblock %} · {{ NOME_LOJA }}</title>
 <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
-<body>
+<body class="{% if user.is_authenticated %}autenticado{% else %}publico{% endif %} {% block body_class %}{% endblock %}">
+<a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
 {% if user.is_authenticated %}
-<header class="topo">
-  <div class="wrap topo-in">
-    <a class="marca" href="{% url 'dashboard' %}">🌾 {{ NOME_LOJA }}</a>
-    <button type="button" id="abrir-menu" class="btn menu-toggle" aria-controls="menu-principal" aria-expanded="false">Menu</button>
+<aside class="topo" aria-label="Área de trabalho">
+  <div class="topo-in">
+    <a class="marca" href="{% url 'dashboard' %}">{% include "loja/_icone.html" with nome="marca" %}<span>Agro Gestão<small>{{ NOME_LOJA }}</small></span></a>
+    {% if pode_financeiro %}<a class="btn primario nova-venda-mobile" href="{% url 'venda_nova' %}">{% include "loja/_icone.html" with nome="mais" %}<span>Nova venda</span></a>{% endif %}
+    <button type="button" id="abrir-menu" class="btn-icone menu-toggle" aria-label="Menu" aria-controls="menu-principal" aria-expanded="false">{% include "loja/_icone.html" with nome="menu" %}</button>
+    {% with pagina=request.resolver_match.url_name %}
     <nav id="menu-principal" aria-label="Navegação principal">
-      {% if pode_financeiro %}
-      <a href="{% url 'venda_nova' %}" class="destaque">+ Nova venda</a>
-      <a href="{% url 'venda_lista' %}">Vendas</a>
-      <a href="{% url 'caixa' %}">Caixa</a>
-      <a href="{% url 'cliente_lista' %}">Clientes / fiado</a>
-      {% endif %}
-      <a href="{% url 'produto_lista' %}">Produtos</a>
-      {% if pode_estoque %}
-      <a href="{% url 'fornecedor_lista' %}">Fornecedores</a>
-      <a href="{% url 'categoria_lista' %}">Categorias</a>
-      <a href="{% url 'lote_lista' %}">Lotes / validade</a>
-      {% endif %}
+      {% if pode_financeiro %}<a href="{% url 'venda_nova' %}" class="nav-nova-venda"{% if pagina == 'venda_nova' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="mais" %}Nova venda</a>{% endif %}
+      <div class="nav-grupo">
+        <span class="nav-titulo">Dia a dia</span>
+        <a href="{% url 'dashboard' %}"{% if pagina == 'dashboard' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="inicio" %}Início</a>
+        {% if pode_financeiro %}
+        <a href="{% url 'venda_lista' %}"{% if 'venda' in pagina and pagina != 'venda_nova' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="vendas" %}Vendas</a>
+        <a href="{% url 'caixa' %}"{% if 'caixa' in pagina or 'movimento' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="caixa" %}Caixa</a>
+        <a href="{% url 'cliente_lista' %}"{% if 'cliente' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="clientes" %}Clientes e fiado</a>
+        {% endif %}
+      </div>
+      <div class="nav-grupo">
+        <span class="nav-titulo">Catálogo</span>
+        <a href="{% url 'produto_lista' %}"{% if 'produto' in pagina or pagina == 'importar_produtos' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="produtos" %}Produtos</a>
+        {% if pode_estoque %}
+        <a href="{% url 'categoria_lista' %}"{% if 'categoria' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="categorias" %}Categorias</a>
+        <a href="{% url 'fornecedor_lista' %}"{% if 'fornecedor' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="fornecedor" %}Fornecedores</a>
+        <a href="{% url 'lote_lista' %}"{% if 'lote' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="lotes" %}Lotes e validade</a>
+        {% endif %}
+      </div>
       {% if pode_gerir %}
-      <a href="{% url 'conta_lista' %}">Contas a pagar</a>
-      <a href="{% url 'relatorio' %}">Relatórios</a>
-      <a href="{% url 'usuario_lista' %}">Usuários</a>
-      <a href="{% url 'auditoria_lista' %}">Histórico</a>
+      <details class="nav-grupo nav-gestao"{% if 'conta' in pagina or pagina == 'relatorio' or 'usuario' in pagina or pagina == 'auditoria_lista' %} open{% endif %}>
+        <summary>Gestão{% include "loja/_icone.html" with nome="chevron" %}</summary>
+        <a href="{% url 'conta_lista' %}"{% if 'conta' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="contas" %}Contas a pagar</a>
+        <a href="{% url 'relatorio' %}"{% if pagina == 'relatorio' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="relatorios" %}Relatórios</a>
+        <a href="{% url 'usuario_lista' %}"{% if 'usuario' in pagina %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="clientes" %}Usuários</a>
+        <a href="{% url 'auditoria_lista' %}"{% if pagina == 'auditoria_lista' %} aria-current="page"{% endif %}>{% include "loja/_icone.html" with nome="historico" %}Histórico</a>
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">{% include "loja/_icone.html" with nome="admin" %}Administração</a>{% endif %}
+      </details>
       {% endif %}
-      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
-      <button type="button" class="link" id="instalar-app" hidden>Instalar no celular</button>
-      <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sair</button></form>
+      <div class="nav-conta">
+        <div class="usuario-atual"><strong>{{ user.get_full_name|default:user.username }}</strong><small>{% if pode_gerir %}Gerente{% elif pode_estoque %}Estoquista{% else %}Caixa{% endif %}</small></div>
+        <button type="button" class="link" id="instalar-app" hidden>{% include "loja/_icone.html" with nome="instalar" %}Instalar no celular</button>
+        <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">{% include "loja/_icone.html" with nome="sair" %}Sair da conta</button></form>
+      </div>
     </nav>
+    {% endwith %}
   </div>
-</header>
+</aside>
 {% endif %}
-<main class="wrap">
-  {% for m in messages %}<div class="aviso {{ m.tags }}">{{ m }}</div>{% endfor %}
+<main class="wrap conteudo" id="conteudo" tabindex="-1">
+  {% if messages %}<div class="mensagens" aria-label="Mensagens">
+    {% for m in messages %}<div class="aviso {{ m.tags }}" {% if 'success' in m.tags %}data-sucesso{% endif %} role="{% if 'error' in m.tags %}alert{% else %}status{% endif %}">
+      {% if 'error' in m.tags or 'warning' in m.tags %}{% include "loja/_icone.html" with nome="alerta" %}{% else %}{% include "loja/_icone.html" with nome="check" %}{% endif %}
+      <span>{{ m }}</span><button type="button" class="btn-icone" data-dispensar aria-label="Dispensar mensagem">{% include "loja/_icone.html" with nome="fechar" %}</button>
+    </div>{% endfor %}
+  </div>{% endif %}
   {% block content %}{% endblock %}
 </main>
+<dialog id="confirmacao" class="modal-confirmacao" aria-labelledby="confirmacao-titulo" aria-describedby="confirmacao-texto">
+  <form method="dialog">
+    <h2 id="confirmacao-titulo">Confirmar ação</h2>
+    <p id="confirmacao-texto"></p>
+    <div class="acoes"><button class="btn" id="confirmacao-cancelar" value="cancelar" autofocus>Voltar</button><button class="btn perigo" id="confirmacao-executar" value="confirmar">Confirmar</button></div>
+  </form>
+</dialog>
 {% block scripts %}{% endblock %}
 <script src="{% static 'js/app.js' %}" defer></script>
 </body>

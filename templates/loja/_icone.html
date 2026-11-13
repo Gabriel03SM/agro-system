@@ -1,0 +1,33 @@
+<svg class="icone{% if classe %} {{ classe }}{% endif %}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{% if nome == "marca" %}<path d="M12 21V4m0 5C6 9 5 5 5 3c5 0 7 3 7 6Zm0 5c6 0 7-4 7-6-5 0-7 3-7 6Zm0 4c-6 0-7-4-7-6 5 0 7 3 7 6Z"/>
+{% elif nome == "inicio" %}<path d="m3 10 9-7 9 7M5 9v11h14V9M9 20v-7h6v7"/>
+{% elif nome == "vendas" %}<path d="M4 5h2l2 11h10l2-8H7M9 5h10M10 20h.01M18 20h.01"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>
+{% elif nome == "caixa" %}<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18m-5 4h5m-5 3h.01M7 5V3h10v2"/>
+{% elif nome == "produtos" %}<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 5v9l9 5 9-5V8M12 13v9M7 5.8l9 5"/>
+{% elif nome == "clientes" %}<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-17a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/>
+{% elif nome == "fornecedor" %}<path d="M3 5h11v12H3V5Zm11 5h4l3 4v3h-7M6 17v1m12-1v1"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>
+{% elif nome == "categorias" %}<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+{% elif nome == "lotes" %}<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 11h16m-12 4h3m-3 3h6"/>
+{% elif nome == "contas" %}<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6m-6 4h3"/>
+{% elif nome == "relatorios" %}<path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/>
+{% elif nome == "historico" %}<path d="M3 11a9 9 0 1 1 2 7M3 4v7h7m2-4v6l4 2"/>
+{% elif nome == "admin" %}<path d="m12 3 8 4v5c0 5-8 10-8 10S4 17 4 12V7l8-4Z"/><path d="m9 12 2 2 4-4"/>
+{% elif nome == "sair" %}<path d="M10 3H4v18h6m4-14 5 5-5 5m-6-5h11"/>
+{% elif nome == "mais" %}<path d="M12 5v14M5 12h14"/>
+{% elif nome == "busca" %}<circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/>
+{% elif nome == "filtro" %}<path d="M4 6h16M7 12h10m-7 6h4"/>
+{% elif nome == "fechar" %}<path d="m6 6 12 12M6 18 18 6"/>
+{% elif nome == "seta" %}<path d="M4 12h16m-6-6 6 6-6 6"/>
+{% elif nome == "voltar" %}<path d="M20 12H4m6-6-6 6 6 6"/>
+{% elif nome == "alerta" %}<path d="m12 3 10 18H2L12 3Zm0 6v5m0 3h.01"/>
+{% elif nome == "check" %}<path d="m5 12 4 4L20 5"/>
+{% elif nome == "entrada" %}<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>
+{% elif nome == "saida" %}<path d="M12 15V3M7 8l5-5 5 5M4 16v5h16v-5"/>
+{% elif nome == "editar" %}<path d="m15 5 4 4M4 20l5-1L21 7l-4-4L5 15l-1 5Z"/>
+{% elif nome == "excluir" %}<path d="M3 6h18M9 6V3h6v3m-10 0 1 15h12l1-15M9 10v7m6-7v7"/>
+{% elif nome == "imprimir" %}<path d="M6 8V3h12v5M6 17H3V8h18v9h-3M6 14h12v7H6v-7Zm11-3h.01"/>
+{% elif nome == "instalar" %}<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 6v9m-3-3 3 3 3-3m-4 7h2"/>
+{% elif nome == "menu" %}<path d="M4 6h16M4 12h16M4 18h16"/>
+{% elif nome == "chevron" %}<path d="m9 6 6 6-6 6"/>
+{% endif %}
+</svg>
