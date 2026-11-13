@@ -1,7 +1,7 @@
 {% if page.paginator.num_pages > 1 %}
-<div class="paginacao">
-  {% if page.has_previous %}<a class="btn" href="?{% if qs %}{{ qs }}&{% endif %}page={{ page.previous_page_number }}">← Anterior</a>{% endif %}
-  <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
-  {% if page.has_next %}<a class="btn" href="?{% if qs %}{{ qs }}&{% endif %}page={{ page.next_page_number }}">Próxima →</a>{% endif %}
+<div class="paginacao" aria-label="Paginação">
+  {% if page.has_previous %}<a class="btn" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">{% include "loja/_icone.html" with nome="voltar" %}Anterior</a>{% endif %}
+  <span>Página <strong>{{ page.number }}</strong> de {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Próxima{% include "loja/_icone.html" with nome="seta" %}</a>{% endif %}
 </div>
 {% endif %}

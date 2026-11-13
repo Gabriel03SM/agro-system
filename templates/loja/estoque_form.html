@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Ajustar estoque{% endblock %}
 {% block content %}
-<div class="card estreito">
-  <h1>Ajustar estoque</h1>
-  <p><strong>{{ produto.nome }}</strong><br>Estoque atual: <strong>{{ produto.estoque_atual|floatformat:"-3g" }} {{ produto.unidade }}</strong></p>
+<header class="cabeca"><div><h1>Ajustar estoque</h1><p class="mudo">{{ produto.nome }}</p></div><a class="link-voltar" href="{% url 'produto_lista' %}">{% include "loja/_icone.html" with nome="voltar" %}Produtos</a></header>
+<div class="card estreito formulario-pagina">
+  <div class="contexto-estoque"><span>Estoque atual</span><strong>{{ produto.estoque_atual|floatformat:"-3g" }} {{ produto.unidade }}</strong><small>Mínimo: {{ produto.estoque_minimo|floatformat:"-3g" }} {{ produto.unidade }}</small></div>
   <form method="post" novalidate>{% csrf_token %}
     {% include "loja/_campos.html" %}
-    <div class="acoes"><button class="btn primario" type="submit">Salvar</button><a class="btn" href="{% url 'produto_lista' %}">Cancelar</a></div>
+    <div class="acoes acoes-formulario"><button class="btn primario" type="submit">Salvar</button><a class="btn" href="{% url 'produto_lista' %}">Cancelar</a></div>
   </form>
 </div>
 <div class="card">
-  <h2>Últimas movimentações</h2>
+  <div class="cabeca-secao"><h2>Últimas movimentações</h2></div>
   <div class="tabela-wrap"><table>
     <thead><tr><th>Quando</th><th>Motivo</th><th class="num">Qtd</th><th>Usuário</th><th>Obs.</th></tr></thead>
     <tbody>{% for m in historico %}
       <tr><td>{{ m.criado_em|date:"d/m/Y H:i" }}</td><td>{{ m.get_motivo_display }}</td>
       <td class="num {% if m.quantidade < 0 %}neg{% else %}pos{% endif %}">{{ m.quantidade|floatformat:"-3g" }}</td>
       <td>{{ m.usuario|default:"—" }}</td><td>{{ m.observacao }}{% if m.fornecedor %}<br>{{ m.fornecedor }} · Custo unitário: R$ {{ m.custo_unitario|floatformat:"2g" }}{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="5" class="mudo">Sem movimentações.</td></tr>{% endfor %}</tbody>
+    {% empty %}<tr><td colspan="5"><p class="vazio-tabela">Nenhuma movimentação registrada. Use o formulário para lançar uma entrada, perda ou contagem.</p></td></tr>{% endfor %}</tbody>
   </table></div>
 </div>
 {% endblock %}

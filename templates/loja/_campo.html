@@ -1,0 +1,10 @@
+<div class="campo{% if field.field.widget.input_type == 'checkbox' %} campo-checkbox{% endif %}{% if field.errors %} campo-com-erro{% endif %}{% if classe %} {{ classe }}{% endif %}" data-campo="{{ field.name }}">
+  {% if field.field.widget.input_type == 'checkbox' %}
+    <label class="rotulo-check" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
+  {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<small id="{{ field.id_for_label }}_helptext" class="ajuda-campo">{{ field.help_text }}</small>{% endif %}
+  {% include "loja/_erros_campo.html" with field=field %}
+</div>

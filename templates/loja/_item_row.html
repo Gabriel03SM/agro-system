@@ -1,11 +1,11 @@
 <div class="item" data-item>
-  <div class="campo prod"><label class="so-mobile" for="{{ form.produto.id_for_label }}">Produto</label>{{ form.produto }}{% for e in form.produto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="campo qtd"><label class="so-mobile" for="{{ form.quantidade.id_for_label }}">Quantidade</label>{{ form.quantidade }}{% for e in form.quantidade.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="campo preco"><label class="so-mobile" for="{{ form.preco_unitario.id_for_label }}">Preço unitário</label>{{ form.preco_unitario }}{% for e in form.preco_unitario.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="campo desconto"><label class="so-mobile" for="{{ form.desconto.id_for_label }}">Desconto (R$)</label>{{ form.desconto }}{% for e in form.desconto.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}</div>
-  <div class="sub"><span data-subtotal>R$ 0,00</span></div>
-  <button type="button" class="link neg" data-remover title="Remover item">✕</button>
+  <div class="campo prod{% if form.produto.errors %} campo-com-erro{% endif %}"><label class="rotulo-item" for="{{ form.produto.id_for_label }}">Produto</label>{{ form.produto }}{% include "loja/_erros_campo.html" with field=form.produto %}</div>
+  <div class="campo qtd{% if form.quantidade.errors %} campo-com-erro{% endif %}"><label class="rotulo-item" for="{{ form.quantidade.id_for_label }}">Quantidade</label>{{ form.quantidade }}{% include "loja/_erros_campo.html" with field=form.quantidade %}</div>
+  <div class="campo preco{% if form.preco_unitario.errors %} campo-com-erro{% endif %}"><label class="rotulo-item" for="{{ form.preco_unitario.id_for_label }}">Preço unitário</label>{{ form.preco_unitario }}{% include "loja/_erros_campo.html" with field=form.preco_unitario %}</div>
+  <div class="campo desconto{% if form.desconto.errors %} campo-com-erro{% endif %}"><label class="rotulo-item" for="{{ form.desconto.id_for_label }}">Desconto (R$)</label>{{ form.desconto }}{% include "loja/_erros_campo.html" with field=form.desconto %}</div>
+  <div class="sub"><span class="rotulo-item">Subtotal</span><span data-subtotal>R$ 0,00</span></div>
+  <button type="button" class="btn-icone remover-item" data-remover title="Remover item" aria-label="Remover item">{% include "loja/_icone.html" with nome="fechar" %}</button>
   {% for h in form.hidden_fields %}{{ h }}{% endfor %}
   <span hidden>{{ form.DELETE }}</span>
-  {% if form.non_field_errors %}<div class="erro">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.non_field_errors %}<div class="erro" role="alert">{{ form.non_field_errors }}</div>{% endif %}
 </div>

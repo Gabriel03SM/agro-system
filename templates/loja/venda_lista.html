@@ -1,29 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Vendas{% endblock %}
 {% block content %}
-<div class="cabeca"><h1>Vendas</h1><a class="btn primario" href="{% url 'venda_nova' %}">+ Nova venda</a></div>
-<form method="get" class="filtros">
-  <input type="search" name="q" value="{{ q }}" placeholder="Cliente ou observação">
-  <input type="date" name="de" value="{{ de }}" title="De">
-  <input type="date" name="ate" value="{{ ate }}" title="Até">
-  <select name="forma"><option value="">Todas as formas</option>
-    {% for cod, nome in formas %}<option value="{{ cod }}" {% if forma == cod %}selected{% endif %}>{{ nome }}</option>{% endfor %}
-  </select>
-  <button class="btn" type="submit">Filtrar</button>
+<header class="cabeca"><div><h1>Vendas</h1><p class="mudo">Consulte uma venda ou acompanhe o movimento do período.</p></div><a class="btn primario" href="{% url 'venda_nova' %}">{% include "loja/_icone.html" with nome="mais" %}Nova venda</a></header>
+<form method="get" class="filtros filtros-vendas" role="search" aria-label="Filtrar vendas">
+  <div class="campo-busca">{% include "loja/_icone.html" with nome="busca" %}<input type="search" name="q" value="{{ q }}" placeholder="Cliente ou observação" aria-label="Buscar venda por cliente ou observação"></div>
+  <label class="filtro-data">De<input type="date" name="de" value="{{ de }}"></label>
+  <label class="filtro-data">Até<input type="date" name="ate" value="{{ ate }}"></label>
+  <select name="forma" aria-label="Forma de pagamento"><option value="">Todas as formas</option>{% for cod, nome in formas %}<option value="{{ cod }}"{% if forma == cod %} selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">{% include "loja/_icone.html" with nome="filtro" %}Filtrar</button>
 </form>
-<div class="tabela-wrap"><table>
-  <thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Pagamento</th><th class="num">Total</th></tr></thead>
-  <tbody>
-  {% for v in page %}
-    <tr class="{% if v.cancelada %}inativo{% endif %}">
-      <td><a href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }}</a></td>
-      <td>{{ v.data|date:"d/m/Y H:i" }}</td>
-      <td>{{ v.cliente|default:"—" }}</td>
-      <td>{{ v.get_forma_pagamento_display }}{% if v.cancelada %} <span class="badge cinza">cancelada</span>{% endif %}</td>
-      <td class="num">R$ {{ v.total|floatformat:"2g" }}</td>
+<div class="tabela-wrap"><table class="tabela-lista tabela-vendas"><caption class="sr-only">Vendas no período selecionado</caption>
+  <thead><tr><th scope="col">Venda</th><th scope="col">Data e hora</th><th scope="col">Cliente</th><th scope="col">Pagamento</th><th scope="col" class="num">Total</th></tr></thead>
+  <tbody>{% for v in page %}
+    <tr{% if v.cancelada %} class="inativo"{% endif %}>
+      <td class="celula-principal"><a class="link-registro" href="{% url 'venda_detalhe' v.pk %}">#{{ v.pk }}{% include "loja/_icone.html" with nome="seta" %}</a>{% if v.cancelada %}<span class="badge cinza">Cancelada</span>{% endif %}</td>
+      <td data-rotulo="Data e hora">{{ v.data|date:"d/m/Y H:i" }}</td>
+      <td data-rotulo="Cliente">{{ v.cliente|default:"Consumidor" }}</td>
+      <td data-rotulo="Pagamento">{{ v.get_forma_pagamento_display }}</td>
+      <td data-rotulo="Total" class="num valor">R$ {{ v.total|floatformat:"2g" }}</td>
     </tr>
-  {% empty %}<tr><td colspan="5" class="mudo">Nenhuma venda encontrada.</td></tr>{% endfor %}
-  </tbody>
+  {% empty %}<tr><td colspan="5"><div class="estado-vazio">{% include "loja/_icone.html" with nome="vendas" %}<h2>Nenhuma venda encontrada</h2>{% if q or de or ate or forma %}<p>Tente outro período ou remova os filtros da busca.</p><a class="btn" href="{% url 'venda_lista' %}">Limpar filtros</a>{% else %}<p>As vendas da loja aparecerão aqui assim que forem registradas.</p><a class="btn" href="{% url 'venda_nova' %}">Registrar uma venda</a>{% endif %}</div></td></tr>{% endfor %}</tbody>
 </table></div>
 {% include "loja/_paginacao.html" %}
 {% endblock %}

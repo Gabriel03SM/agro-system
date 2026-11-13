@@ -26,6 +26,83 @@
     datalist.appendChild(sugestao);
   });
 
+  var preparados = new WeakSet();
+
+  function candidatos(texto) {
+    var termo = normalizar(texto.trim());
+    if (!termo) return [];
+    var produtos = Array.from(catalogo.values());
+    var exatos = produtos.filter(function (p) {
+      return (p.codigo && normalizar(p.codigo) === termo) || normalizar(p.rotulo) === termo;
+    });
+    return exatos.length ? exatos : produtos.filter(function (p) { return normalizar(p.nome).includes(termo); });
+  }
+
+  function atualizarBuscaDaLinha(linha) {
+    var select = linha.querySelector("select[name$='-produto']");
+    var campo = linha.querySelector("[data-produto-busca]");
+    if (!campo) return;
+    var produto = catalogo.get(select.value);
+    var opcao = select.selectedOptions[0];
+    campo.value = produto ? produto.rotulo : (opcao && opcao.dataset.nome ? opcao.dataset.nome : "");
+  }
+
+  function prepararLinha(linha) {
+    var select = linha.querySelector("select[name$='-produto']");
+    if (!select || preparados.has(select)) return;
+    preparados.add(select);
+    var campo = document.createElement("input");
+    campo.type = "search";
+    campo.id = select.id + "-busca";
+    campo.className = "produto-busca-linha";
+    campo.dataset.produtoBusca = "";
+    campo.setAttribute("list", "catalogo-produtos");
+    campo.setAttribute("autocomplete", "off");
+    campo.setAttribute("aria-label", "Produto");
+    campo.placeholder = "Digite para buscar";
+    if (select.required) campo.setAttribute("aria-required", "true");
+    ["aria-describedby", "aria-invalid"].forEach(function (atributo) {
+      if (select.hasAttribute(atributo)) campo.setAttribute(atributo, select.getAttribute(atributo));
+    });
+    select.insertAdjacentElement("afterend", campo);
+    var rotulo = select.closest(".campo").querySelector("label");
+    if (rotulo) rotulo.htmlFor = campo.id;
+    select.classList.add("produto-nativo");
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+    atualizarBuscaDaLinha(linha);
+
+    function selecionar() {
+      var encontrados = candidatos(campo.value);
+      if (encontrados.length !== 1) {
+        select.value = "";
+        campo.setAttribute("aria-invalid", "true");
+        resultado.textContent = encontrados.length ? "Escolha um produto nas sugestões." : "Produto não encontrado. Confira o nome ou o código.";
+        return false;
+      }
+      select.value = encontrados[0].id;
+      campo.removeAttribute("aria-invalid");
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      atualizarBuscaDaLinha(linha);
+      return true;
+    }
+    campo.addEventListener("input", function () {
+      select.value = "";
+      campo.removeAttribute("aria-invalid");
+    });
+    campo.addEventListener("change", selecionar);
+    campo.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" || event.isComposing) return;
+      event.preventDefault();
+      if (selecionar()) linha.querySelector("[name$='-quantidade']").focus();
+    });
+  }
+
+  function focarProduto(linha) {
+    var campo = linha && (linha.querySelector("[data-produto-busca]") || linha.querySelector("select[name$='-produto']"));
+    if (campo) campo.focus();
+  }
+
   function recalcular() {
     var soma = 0;
     linhas().forEach(function (linha) {
@@ -58,6 +135,7 @@
     tmp.innerHTML = modelo.innerHTML.replace(/__prefix__/g, totalForms.value).trim();
     var linha = tmp.firstElementChild;
     lista.appendChild(linha);
+    prepararLinha(linha);
     totalForms.value = Number(totalForms.value) + 1;
     recalcular();
     return linha;
@@ -89,6 +167,7 @@
       linha.querySelector("[name$='-preco_unitario']").value = produto.preco;
       linha.querySelector("[name$='-desconto']").value = "0";
     }
+    atualizarBuscaDaLinha(linha);
     busca.value = "";
     resultado.textContent = produto.nome + " adicionado à venda.";
     recalcular();
@@ -99,14 +178,16 @@
   busca.addEventListener("keydown", function (event) {
     if (event.key === "Enter") { event.preventDefault(); adicionarBusca(); }
   });
-  document.getElementById("add-item").addEventListener("click", adicionar);
+  document.getElementById("add-item").addEventListener("click", function () { focarProduto(adicionar()); });
   lista.addEventListener("click", function (event) {
-    if (!event.target.matches("[data-remover]")) return;
-    var linha = event.target.closest("[data-item]");
+    var botao = event.target.closest("[data-remover]");
+    if (!botao) return;
+    var linha = botao.closest("[data-item]");
     linha.querySelector("[name$='-DELETE']").checked = true;
     linha.hidden = true;
     if (!linhas().length) adicionar();
     recalcular();
+    busca.focus();
   });
   lista.addEventListener("change", function (event) {
     if (event.target.matches("select[name$='-produto']")) {
@@ -117,11 +198,22 @@
     }
     recalcular();
   });
+  lista.addEventListener("keydown", function (event) {
+    if (event.key !== "Enter" || event.isComposing || event.ctrlKey || event.metaKey) return;
+    if (!event.target.matches("[name$='-quantidade'],[name$='-preco_unitario'],[name$='-desconto']")) return;
+    event.preventDefault();
+    var atual = event.target.closest("[data-item]");
+    if (!atual.querySelector("[name$='-produto']").value) focarProduto(atual);
+    else focarProduto(adicionar());
+  });
   form.addEventListener("input", recalcular);
   form.addEventListener("change", recalcular);
   form.addEventListener("submit", function () { form.querySelector("button[type='submit']").disabled = true; });
   window.addEventListener("pageshow", function () { form.querySelector("button[type='submit']").disabled = false; });
-  lista.querySelectorAll("[data-item]").forEach(function (r) { r.hidden = r.querySelector("[name$='-DELETE']").checked; });
+  lista.querySelectorAll("[data-item]").forEach(function (r) {
+    r.hidden = r.querySelector("[name$='-DELETE']").checked;
+    prepararLinha(r);
+  });
   recalcular();
-  if (window.matchMedia("(min-width: 981px)").matches) busca.focus();
+  if (!form.querySelector(".campo-com-erro,[aria-invalid='true']")) busca.focus({ preventScroll: true });
 })();

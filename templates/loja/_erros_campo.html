@@ -1,0 +1,1 @@
+{% if field.errors %}<div class="erros-campo" id="{{ field.id_for_label }}_error">{% for e in field.errors %}<small class="msg-erro">{% include "loja/_icone.html" with nome="alerta" %}{{ e }}</small>{% endfor %}</div>{% endif %}

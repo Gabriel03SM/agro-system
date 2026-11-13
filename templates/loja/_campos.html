@@ -1,9 +1,3 @@
-{% if form.non_field_errors %}<div class="erro">{{ form.non_field_errors }}</div>{% endif %}
-{% for field in form.visible_fields %}
-<div class="campo">
-  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-  {{ field }}
-  {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-  {% for e in field.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}
-</div>
-{% endfor %}
+{% if form.non_field_errors %}<div class="erro" role="alert">{% include "loja/_icone.html" with nome="alerta" %}<div>{{ form.non_field_errors }}</div></div>{% endif %}
+{% for field in form.hidden_fields %}{{ field }}{% for e in field.errors %}<small class="msg-erro">{{ e }}</small>{% endfor %}{% endfor %}
+{% for field in form.visible_fields %}{% include "loja/_campo.html" with field=field %}{% endfor %}

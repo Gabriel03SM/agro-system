@@ -1,6 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Confirmar{% endblock %}
+{% block title %}Confirmar exclusão{% endblock %}
 {% block content %}
-<div class="card estreito"><h1>Confirmar</h1><p>{{ texto }}</p>
-<form method="post">{% csrf_token %}<div class="acoes"><button class="btn perigo" type="submit">Sim, excluir</button><a class="btn" href="{% url voltar %}">Cancelar</a></div></form></div>
+<section class="card estreito confirmar-pagina">
+  {% include "loja/_icone.html" with nome="alerta" %}
+  <h1>Confirmar exclusão</h1><p>{{ texto }}</p>
+  <form method="post">{% csrf_token %}<div class="acoes"><a class="btn" href="{% url voltar %}">Cancelar</a><button class="btn perigo" type="submit">Sim, excluir</button></div></form>
+</section>
 {% endblock %}

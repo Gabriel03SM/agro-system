@@ -1,15 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Entrar{% endblock %}
+{% block body_class %}pagina-login{% endblock %}
 {% block content %}
-<div class="card login">
-  <h1>🌾 {{ NOME_LOJA }}</h1>
-  <p class="mudo">Entre para acessar o sistema.</p>
-  <form method="post">{% csrf_token %}
-    {% if form.errors %}<div class="erro">Usuário ou senha incorretos.</div>{% endif %}
-    <div class="campo"><label for="id_username">Usuário</label>{{ form.username }}</div>
-    <div class="campo"><label for="id_password">Senha</label>{{ form.password }}</div>
-    <input type="hidden" name="next" value="{{ next }}">
-    <button class="btn primario" type="submit">Entrar</button>
-  </form>
+<div class="login">
+  <a class="marca marca-login" href="{% url 'login' %}">{% include "loja/_icone.html" with nome="marca" %}<span>Agro Gestão</span></a>
+  <div class="login-formulario">
+    <h1>{{ NOME_LOJA }}</h1>
+    <p class="mudo">Informe seu usuário e senha.</p>
+    <form method="post">{% csrf_token %}
+      {% if form.errors %}<div class="erro" role="alert">{% include "loja/_icone.html" with nome="alerta" %}<span>Usuário ou senha incorretos. Confira os dados e tente novamente.</span></div>{% endif %}
+      <div class="campo"><label for="id_username">Usuário</label>{{ form.username }}</div>
+      <div class="campo"><label for="id_password">Senha</label>{{ form.password }}</div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn primario" type="submit">Entrar{% include "loja/_icone.html" with nome="seta" %}</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

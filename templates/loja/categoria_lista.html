@@ -1,18 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Categorias{% endblock %}
 {% block content %}
-<h1>Categorias</h1>
-<div class="duas">
-  <section class="card">
-    <h2>Nova categoria</h2>
-    <form method="post" novalidate>{% csrf_token %}{% include "loja/_campos.html" %}<button class="btn primario" type="submit">Adicionar</button></form>
-  </section>
-  <section class="card">
-    <h2>Cadastradas</h2>
-    {% for c in categorias %}
-      <div class="linha"><span>{{ c.nome }} <small class="mudo">({{ c.qtd }} produto{{ c.qtd|pluralize }})</small></span>
-      {% if user.is_staff %}<form method="post" action="{% url 'categoria_excluir' c.pk %}" class="inline" onsubmit="return confirm('Excluir a categoria {{ c.nome|escapejs }}? Os produtos ficarão sem categoria.')">{% csrf_token %}<button class="link neg" type="submit">Excluir</button></form>{% endif %}</div>
-    {% empty %}<p class="mudo">Nenhuma categoria cadastrada.</p>{% endfor %}
+<header class="cabeca"><div><h1>Categorias</h1><p class="mudo">Organize os produtos para encontrar o que precisa.</p></div></header>
+<div class="categorias-layout">
+  <section class="card formulario-categoria"><h2>Nova categoria</h2><form method="post" novalidate>{% csrf_token %}{% include "loja/_campos.html" %}<button class="btn primario" type="submit">{% include "loja/_icone.html" with nome="mais" %}Adicionar</button></form></section>
+  <section class="card lista-categorias"><div class="cabeca-secao"><h2>Categorias cadastradas</h2></div>
+    {% for c in categorias %}<div class="linha"><span><strong>{{ c.nome }}</strong><small>{{ c.qtd }} produto{{ c.qtd|pluralize }}</small></span>{% if user.is_staff %}<form method="post" action="{% url 'categoria_excluir' c.pk %}" class="inline" data-confirm="Excluir a categoria {{ c.nome }}? Os produtos ficarão sem categoria." data-confirm-titulo="Excluir categoria" data-confirm-botao="Excluir categoria">{% csrf_token %}<button class="btn-icone" type="submit" aria-label="Excluir categoria: {{ c.nome }}">{% include "loja/_icone.html" with nome="excluir" %}</button></form>{% endif %}</div>
+    {% empty %}<div class="estado-vazio">{% include "loja/_icone.html" with nome="categorias" %}<h3>Nenhuma categoria cadastrada</h3><p>Cadastre categorias como rações, sementes ou ferramentas.</p><a class="link-acao" href="#id_nome">Cadastrar a primeira categoria{% include "loja/_icone.html" with nome="seta" %}</a></div>{% endfor %}
   </section>
 </div>
 {% endblock %}
